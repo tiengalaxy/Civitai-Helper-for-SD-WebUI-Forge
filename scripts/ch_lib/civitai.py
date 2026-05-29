@@ -165,7 +165,10 @@ def load_model_info_by_search_term(model_type, search_term):
         util.printD("unknow model type: " + model_type)
         return
 
-    base, ext = os.path.splitext(search_term)
+    parts = search_term.split()
+    path_part = parts[0] if parts else search_term
+
+    base, ext = os.path.splitext(path_part)
     model_info_base = base
 
     if model_info_base[:1] == "/":
