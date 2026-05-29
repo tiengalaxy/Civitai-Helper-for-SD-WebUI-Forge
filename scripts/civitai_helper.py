@@ -2,13 +2,6 @@
 import modules.scripts as scripts
 import gradio as gr
 import os
-import webbrowser
-import requests
-import random
-import hashlib
-import json
-import shutil
-import re
 import modules
 from modules import script_callbacks
 from modules import shared
@@ -24,7 +17,6 @@ extension_path = scripts.basedir()
 
 model.get_custom_model_folder()
 
-# 用于防止标签页和设置被重复注册的标志位
 _ui_registered = False
 _settings_registered = False
 
@@ -34,7 +26,7 @@ def on_ui_settings():
     if _settings_registered:
         return
     _settings_registered = True
-    
+
     ch_section = ("civitai_helper", "Civitai Helper")
     shared.opts.add_option("ch_max_size_preview", shared.OptionInfo(True, "Download Max Size Preview", gr.Checkbox, {"interactive": True}, section=ch_section))
     shared.opts.add_option("ch_skip_nsfw_preview", shared.OptionInfo(False, "Skip NSFW Preview Images", gr.Checkbox, {"interactive": True}, section=ch_section))
@@ -50,7 +42,7 @@ def on_ui_tabs():
     if _ui_registered:
         return None
     _ui_registered = True
-    
+
     txt2img_prompt = modules.ui.txt2img_paste_fields[0][0]
     txt2img_neg_prompt = modules.ui.txt2img_paste_fields[1][0]
     img2img_prompt = modules.ui.img2img_paste_fields[0][0]
@@ -91,7 +83,7 @@ def on_ui_tabs():
 
     def scan_model_gen(scan_model_types):
         yield from model_action_civitai.scan_model(scan_model_types, max_size_preview, skip_nsfw_preview)
-    
+
     def get_model_info_by_input(model_type_drop, model_name_drop, model_url_or_id_txtbox):
         return model_action_civitai.get_model_info_by_input(model_type_drop, model_name_drop, model_url_or_id_txtbox, max_size_preview, skip_nsfw_preview)
 
@@ -146,7 +138,7 @@ def on_ui_tabs():
                 scan_model_civitai_btn = gr.Button(value="Scan", variant="primary", elem_id="ch_scan_model_civitai_btn")
                 scan_model_log_md = gr.Markdown(value="Scanning takes time, just wait. Check console log for detail", elem_id="ch_scan_model_log_md")
 
-        
+
         with gr.Box(elem_classes="ch_box"):
             with gr.Column():
                 gr.Markdown("### Get Model Info from Civitai by URL")
@@ -174,7 +166,7 @@ def on_ui_tabs():
                     dl_subfolder_drop = gr.Dropdown(choices=[], label="Sub-folder", value="", interactive=True, multiselect=False)
                     dl_version_drop = gr.Dropdown(choices=[], label="Model Version", value="", interactive=True, multiselect=False)
                     dl_all_ckb = gr.Checkbox(label="Download All files", value=False, elem_id="ch_dl_all_ckb", elem_classes="ch_vpadding")
-                
+
                 dl_civitai_model_by_id_btn = gr.Button(value="3. Download Model", variant="primary")
                 dl_log_md = gr.Markdown(value="Check Console log for Downloading Status")
 

@@ -8,7 +8,10 @@ from . import util
 from . import model
 from . import setting
 
+
 suffix = ".civitai"
+
+REQUEST_TIMEOUT = 30
 
 model_type_dict = {
     "Checkpoint": "ckp",
@@ -26,6 +29,16 @@ model_type_dict = {
     "Standard": "ckp",
 }
 
+model_folder_name_map = {
+    "ti": "embeddings",
+    "hyper": "hypernetworks",
+    "ckp": "Stable-diffusion",
+    "controlnet": "Controlnet",
+    "vae": "VAE",
+    "upscaler": "ESRGAN",
+    "lora": "Lora",
+}
+
 
 def get_url_dict():
     domain = util.civitai_domain
@@ -38,134 +51,70 @@ def get_url_dict():
 
 
 def get_full_size_image_url(image_url, width):
-    return re.sub('/width=\d+/', '/width=' + str(width) + '/', image_url)
+    return re.sub(r'/width=\d+/', '/width=' + str(width) + '/', image_url)
 
 
-def get_model_info_by_hash(hash:str, timeout=30):
+def _api_get(url, not_found_label="model", timeout=REQUEST_TIMEOUT):
     util.printD("Request model info from civitai")
 
+    try:
+        r = requests.get(url, headers=util.def_headers, proxies=util.proxies, timeout=timeout)
+        if not r.ok:
+            if r.status_code == 404:
+                util.printD(f"Civitai does not have this {not_found_label}")
+                return {}
+            else:
+                util.printD("Get error code: " + str(r.status_code))
+                util.printD(r.text)
+                return
+
+        try:
+            content = r.json()
+        except Exception as e:
+            util.printD("Parse response json failed")
+            util.printD(str(e))
+            util.printD("response:")
+            util.printD(r.text)
+            return
+
+        if not content:
+            util.printD("error, content from civitai is None")
+            return
+
+        return content
+    except requests.exceptions.Timeout:
+        util.printD(f"API request timed out after {timeout} seconds")
+        return
+    except Exception as e:
+        util.printD(f"API request failed: {str(e)}")
+        return
+
+
+def get_model_info_by_hash(hash:str, timeout=REQUEST_TIMEOUT):
     if not hash:
         util.printD("hash is empty")
         return
 
-    try:
-        url_dict = get_url_dict()
-        r = requests.get(url_dict["hash"]+hash, headers=util.def_headers, proxies=util.proxies, timeout=timeout)
-        if not r.ok:
-            if r.status_code == 404:
-                util.printD("Civitai does not have this model")
-                return {}
-            else:
-                util.printD("Get error code: " + str(r.status_code))
-                util.printD(r.text)
-                return
-
-        content = None
-        try:
-            content = r.json()
-        except Exception as e:
-            util.printD("Parse response json failed")
-            util.printD(str(e))
-            util.printD("response:")
-            util.printD(r.text)
-            return
-        
-        if not content:
-            util.printD("error, content from civitai is None")
-            return
-        
-        return content
-    except requests.exceptions.Timeout:
-        util.printD(f"API request timed out after {timeout} seconds")
-        return
-    except Exception as e:
-        util.printD(f"API request failed: {str(e)}")
-        return
+    url_dict = get_url_dict()
+    return _api_get(url_dict["hash"]+hash, not_found_label="model", timeout=timeout)
 
 
-
-def get_model_info_by_id(id:str, timeout=30) -> dict:
-    util.printD("Request model info from civitai")
-
+def get_model_info_by_id(id:str, timeout=REQUEST_TIMEOUT) -> dict:
     if not id:
         util.printD("id is empty")
         return
 
-    try:
-        url_dict = get_url_dict()
-        r = requests.get(url_dict["modelId"]+str(id), headers=util.def_headers, proxies=util.proxies, timeout=timeout)
-        if not r.ok:
-            if r.status_code == 404:
-                util.printD("Civitai does not have this model")
-                return {}
-            else:
-                util.printD("Get error code: " + str(r.status_code))
-                util.printD(r.text)
-                return
-
-        content = None
-        try:
-            content = r.json()
-        except Exception as e:
-            util.printD("Parse response json failed")
-            util.printD(str(e))
-            util.printD("response:")
-            util.printD(r.text)
-            return
-        
-        if not content:
-            util.printD("error, content from civitai is None")
-            return
-        
-        return content
-    except requests.exceptions.Timeout:
-        util.printD(f"API request timed out after {timeout} seconds")
-        return
-    except Exception as e:
-        util.printD(f"API request failed: {str(e)}")
-        return
+    url_dict = get_url_dict()
+    return _api_get(url_dict["modelId"]+str(id), not_found_label="model", timeout=timeout)
 
 
-def get_version_info_by_version_id(id:str, timeout=30) -> dict:
-    util.printD("Request version info from civitai")
-
+def get_version_info_by_version_id(id:str, timeout=REQUEST_TIMEOUT) -> dict:
     if not id:
         util.printD("id is empty")
         return
 
-    try:
-        url_dict = get_url_dict()
-        r = requests.get(url_dict["modelVersionId"]+str(id), headers=util.def_headers, proxies=util.proxies, timeout=timeout)
-        if not r.ok:
-            if r.status_code == 404:
-                util.printD("Civitai does not have this model version")
-                return {}
-            else:
-                util.printD("Get error code: " + str(r.status_code))
-                util.printD(r.text)
-                return
-
-        content = None
-        try:
-            content = r.json()
-        except Exception as e:
-            util.printD("Parse response json failed")
-            util.printD(str(e))
-            util.printD("response:")
-            util.printD(r.text)
-            return
-        
-        if not content:
-            util.printD("error, content from civitai is None")
-            return
-        
-        return content
-    except requests.exceptions.Timeout:
-        util.printD(f"API request timed out after {timeout} seconds")
-        return
-    except Exception as e:
-        util.printD(f"API request failed: {str(e)}")
-        return
+    url_dict = get_url_dict()
+    return _api_get(url_dict["modelVersionId"]+str(id), not_found_label="model version", timeout=timeout)
 
 
 def get_version_info_by_model_id(id:str) -> dict:
@@ -174,30 +123,30 @@ def get_version_info_by_model_id(id:str) -> dict:
     if not model_info:
         util.printD(f"Failed to get model info by id: {id}")
         return
-    
+
     if "modelVersions" not in model_info.keys():
         util.printD("There is no modelVersions in this model_info")
         return
-    
+
     if not model_info["modelVersions"]:
         util.printD("modelVersions is None")
         return
-    
+
     if len(model_info["modelVersions"])==0:
         util.printD("modelVersions is Empty")
         return
-    
+
     def_version = model_info["modelVersions"][0]
     if not def_version:
         util.printD("default version is None")
         return
-    
+
     if "id" not in def_version.keys():
         util.printD("default version has no id")
         return
-    
+
     version_id = def_version["id"]
-    
+
     if not version_id:
         util.printD("default version's id is None")
         return
@@ -210,32 +159,19 @@ def get_version_info_by_model_id(id:str) -> dict:
     return version_info
 
 
-
-
 def load_model_info_by_search_term(model_type, search_term):
     util.printD(f"Load model info of {search_term} in {model_type}")
     if model_type not in model.folders.keys():
         util.printD("unknow model type: " + model_type)
         return
-    
+
     base, ext = os.path.splitext(search_term)
     model_info_base = base
 
     if model_info_base[:1] == "/":
         model_info_base = model_info_base[1:]
 
-    model_folder_name = "";
-    if model_type == "ti":
-        model_folder_name = "embeddings"
-    elif model_type == "hyper":
-        model_folder_name = "hypernetworks"
-    elif model_type == "ckp":
-        model_folder_name = "Stable-diffusion"
-    else:
-        model_folder_name = "Lora"
-
     model_folder = model.folders[model_type]
-
     model_folder_name = os.path.basename(model_folder)
 
     if model_info_base.startswith(model_folder_name):
@@ -244,34 +180,31 @@ def load_model_info_by_search_term(model_type, search_term):
         if model_info_base.startswith("/") or model_info_base.startswith("\\"):
             model_info_base = model_info_base[1:]
 
-    
     model_info_filename = model_info_base + suffix + model.info_ext
     model_info_filepath = os.path.join(model_folder, model_info_filename)
 
     if not os.path.isfile(model_info_filepath):
         util.printD("Can not find model info file: " + model_info_filepath)
         return
-    
+
     return model.load_model_info(model_info_filepath)
 
 
 def load_model_info_by_model_path(model_path):
     util.printD(f"Load model info of {model_path}")
-    
+
     base, ext = os.path.splitext(model_path)
     model_info_filepath = base + suffix + model.info_ext
 
     if not os.path.isfile(model_info_filepath):
         util.printD("Can not find model info file: " + model_info_filepath)
         return
-    
+
     return model.load_model_info(model_info_filepath)
 
 
-
-
 def get_model_names_by_type_and_filter(model_type:str, filter:dict) -> list:
-    
+
     model_folder = model.folders[model_type]
 
     no_info_only = False
@@ -282,8 +215,6 @@ def get_model_names_by_type_and_filter(model_type:str, filter:dict) -> list:
             no_info_only = filter["no_info_only"]
         if "empty_info_only" in filter.keys():
             empty_info_only = filter["empty_info_only"]
-
-
 
     model_names = []
     for root, dirs, files in os.walk(model_folder, followlinks=True):
@@ -306,12 +237,11 @@ def get_model_names_by_type_and_filter(model_type:str, filter:dict) -> list:
 
                 model_names.append(filename)
 
-
     return model_names
 
 def get_model_names_by_input(model_type, empty_info_only):
     return get_model_names_by_type_and_filter(model_type, {"empty_info_only":empty_info_only})
-    
+
 
 def get_model_id_from_url(url:str) -> str:
     util.printD("Run get_model_id_from_url")
@@ -324,12 +254,12 @@ def get_model_id_from_url(url:str) -> str:
     if url.isnumeric():
         id = str(url)
         return id
-    
+
     s = re.sub("\\?.+$", "", url).split("/")
     if len(s) < 2:
         util.printD("url is not valid")
         return ""
-    
+
     if s[-2].isnumeric():
         id  = s[-2]
     elif s[-1].isnumeric():
@@ -337,7 +267,7 @@ def get_model_id_from_url(url:str) -> str:
     else:
         util.printD("There is no model id in this url")
         return ""
-    
+
     return id
 
 
@@ -351,8 +281,7 @@ def get_preview_image_by_model_path(model_path:str, max_size_preview, skip_nsfw_
         return
 
     base, ext = os.path.splitext(model_path)
-    first_preview = base+".png"
-    sec_preview = base+".preview.png"
+    sec_preview = base + ".preview.png"
     info_file = base + suffix + model.info_ext
 
     if not os.path.isfile(sec_preview):
@@ -377,7 +306,7 @@ def get_preview_image_by_model_path(model_path:str, max_size_preview, skip_nsfw_
                         if preview_type != "image":
                             util.printD(f"Unsupported preview type: {preview_type}, ignore.")
                             continue
-                        
+
                         if "url" in img_dict.keys():
                             img_url = img_dict["url"]
                             if max_size_preview:
@@ -403,11 +332,11 @@ def search_local_model_info_by_version_id(folder:str, version_id:int, walk:bool=
     if not os.path.isdir(folder):
         util.printD("folder is not a dir")
         return
-    
+
     if not version_id:
         util.printD("version_id is none")
         return
-    
+
     if walk:
         util.printD(f"Searching model version id {version_id} by walking in: {folder}")
         for root, dirs, files in os.walk(folder, followlinks=True):
@@ -457,11 +386,15 @@ def search_local_model_info_by_version_id(folder:str, version_id:int, walk:bool=
 
                     if str(id) == str(version_id):
                         return model_info
-                        
 
     return
 
 
+def _safe_get(d, key, default=None):
+    if not d:
+        return default
+    val = d.get(key, default)
+    return default if not val else val
 
 
 def check_model_new_version_by_path(model_path:str, delay:float=1) -> tuple:
@@ -472,28 +405,22 @@ def check_model_new_version_by_path(model_path:str, delay:float=1) -> tuple:
     if not os.path.isfile(model_path):
         util.printD("model_path is not a file: "+model_path)
         return
-    
+
     base, ext = os.path.splitext(model_path)
     info_file = base + suffix + model.info_ext
-    
+
     if not os.path.isfile(info_file):
         return
-    
+
     model_info_file = model.load_model_info(info_file)
     if not model_info_file:
         return
 
-    if "id" not in model_info_file.keys():
-        return
-    
-    local_version_id = model_info_file["id"]
+    local_version_id = _safe_get(model_info_file, "id")
     if not local_version_id:
         return
 
-    if "modelId" not in model_info_file.keys():
-        return
-    
-    model_id = model_info_file["modelId"]
+    model_id = _safe_get(model_info_file, "modelId")
     if not model_id:
         return
 
@@ -503,25 +430,16 @@ def check_model_new_version_by_path(model_path:str, delay:float=1) -> tuple:
 
     if not model_info:
         return
-    
-    if "modelVersions" not in model_info.keys():
-        return
-    
-    modelVersions = model_info["modelVersions"]
+
+    modelVersions = _safe_get(model_info, "modelVersions", [])
     if not modelVersions:
         return
-    
-    if not len(modelVersions):
-        return
-    
+
     current_version = modelVersions[0]
     if not current_version:
         return
-    
-    if "id" not in current_version.keys():
-        return
-    
-    current_version_id = current_version["id"]
+
+    current_version_id = _safe_get(current_version, "id")
     if not current_version_id:
         return
 
@@ -529,49 +447,17 @@ def check_model_new_version_by_path(model_path:str, delay:float=1) -> tuple:
     if current_version_id == local_version_id:
         return
 
-    model_name = ""
-    if "name" in model_info.keys():
-        model_name = model_info["name"]
-    
-    if not model_name:
-        model_name = ""
-
-
-    new_version_name = ""
-    if "name" in current_version.keys():
-        new_version_name = current_version["name"]
-    
-    if not new_version_name:
-        new_version_name = ""
-
-    description = ""
-    if "description" in current_version.keys():
-        description = current_version["description"]
-    
-    if not description:
-        description = ""
-
-    downloadUrl = ""
-    if "downloadUrl" in current_version.keys():
-        downloadUrl = current_version["downloadUrl"]
-    
-    if not downloadUrl:
-        downloadUrl = ""
+    model_name = _safe_get(model_info, "name", "")
+    new_version_name = _safe_get(current_version, "name", "")
+    description = _safe_get(current_version, "description", "")
+    downloadUrl = _safe_get(current_version, "downloadUrl", "")
 
     img_url = ""
-    if "images" in current_version.keys():
-        if current_version["images"]:
-            if current_version["images"][0]:
-                if "url" in current_version["images"][0].keys():
-                    img_url = current_version["images"][0]["url"]
-                    if not img_url:
-                        img_url = ""
+    images = _safe_get(current_version, "images", [])
+    if images and images[0]:
+        img_url = _safe_get(images[0], "url", "")
 
-
-    
     return (model_path, model_id, model_name, current_version_id, new_version_name, description, downloadUrl, img_url)
-
-
 
 
 def check_models_new_version_by_model_types(model_types:list, delay:float=1, check_new_ver_exist_in_all_folder:bool=False) -> list:
@@ -590,7 +476,6 @@ def check_models_new_version_by_model_types(model_types:list, delay:float=1, che
         util.printD(model_types)
         return []
 
-    output = ""
     new_versions = []
 
     for model_type, model_folder in model.folders.items():
@@ -612,12 +497,7 @@ def check_models_new_version_by_model_types(model_types:list, delay:float=1, che
                     if not current_version_id:
                         continue
 
-                    is_already_in_list = False
-                    for new_version in new_versions:
-                        if current_version_id == new_version[3]:
-                            is_already_in_list = True
-                            break
-
+                    is_already_in_list = any(current_version_id == nv[3] for nv in new_versions)
                     if is_already_in_list:
                         util.printD("New version is already in list")
                         continue
@@ -631,8 +511,5 @@ def check_models_new_version_by_model_types(model_types:list, delay:float=1, che
                         continue
 
                     new_versions.append(r)
-
-
-
 
     return new_versions
