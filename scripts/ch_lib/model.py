@@ -189,3 +189,14 @@ def has_info_and_preview(model_path:str) -> bool:
     has_preview = os.path.isfile(first_preview) or os.path.isfile(sec_preview)
 
     return has_info and has_preview
+
+
+def _has_preview(model_path:str) -> bool:
+    if not model_path or not os.path.isfile(model_path):
+        return False
+
+    base, ext = os.path.splitext(model_path)
+    first_preview = base + ".png"
+    sec_preview = base + ".preview.png"
+
+    return os.path.isfile(first_preview) or os.path.isfile(sec_preview)

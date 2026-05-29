@@ -10,7 +10,7 @@ from . import downloader
 MAX_TABLE_ROWS = 50
 
 
-def scan_model(scan_model_types, max_size_preview, skip_nsfw_preview):
+def scan_model(scan_model_types, max_size_preview, skip_nsfw_preview, force_overwrite=False):
     util.printD("Start scan_model")
 
     if not scan_model_types:
@@ -47,7 +47,10 @@ def scan_model(scan_model_types, max_size_preview, skip_nsfw_preview):
         yield "No models found to scan."
         return
 
-    yield f"🔍 Found **{total}** models to scan. Starting...\n\n| Step | Model | Status |\n|------|-------|--------|"
+    if force_overwrite:
+        yield f"🔍 Found **{total}** models. **Force Overwrite** mode - re-fetching all model info...\n\n| Step | Model | Status |\n|------|-------|--------|"
+    else:
+        yield f"🔍 Found **{total}** models to scan. Starting...\n\n| Step | Model | Status |\n|------|-------|--------|"
 
     model_count = 0
     image_count = 0
@@ -59,7 +62,7 @@ def scan_model(scan_model_types, max_size_preview, skip_nsfw_preview):
             current = idx + 1
             base, ext = os.path.splitext(item)
 
-            if model.has_info_and_preview(item):
+            if not force_overwrite and model.has_info_and_preview(item):
                 skipped_count = skipped_count + 1
                 table_rows.append(f"| {current}/{total} | {filename} | ⏭ Skipped (complete) |")
                 if current % 10 == 0 or current == total:
@@ -69,7 +72,9 @@ def scan_model(scan_model_types, max_size_preview, skip_nsfw_preview):
                 continue
 
             info_file = base + civitai.suffix + model.info_ext
-            if not os.path.isfile(info_file):
+            need_fetch_info = force_overwrite or not os.path.isfile(info_file)
+
+            if need_fetch_info:
                 table_rows.append(f"| {current}/{total} | {filename} | 🔐 Computing SHA256... |")
                 progress_pct = int(current / total * 100)
                 display_rows = table_rows[-MAX_TABLE_ROWS:]
@@ -99,15 +104,19 @@ def scan_model(scan_model_types, max_size_preview, skip_nsfw_preview):
 
             model_count = model_count + 1
 
-            table_rows.append(f"| {current}/{total} | {filename} | 🖼 Downloading preview... |")
-            progress_pct = int(current / total * 100)
-            display_rows = table_rows[-MAX_TABLE_ROWS:]
-            yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n" + "\n".join(display_rows)
+            need_preview = force_overwrite or not model._has_preview(item)
+            if need_preview:
+                table_rows.append(f"| {current}/{total} | {filename} | 🖼 Downloading preview... |")
+                progress_pct = int(current / total * 100)
+                display_rows = table_rows[-MAX_TABLE_ROWS:]
+                yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n" + "\n".join(display_rows)
 
-            civitai.get_preview_image_by_model_path(item, max_size_preview, skip_nsfw_preview)
-            image_count = image_count + 1
+                civitai.get_preview_image_by_model_path(item, max_size_preview, skip_nsfw_preview)
+                image_count = image_count + 1
 
-            table_rows[-1] = f"| {current}/{total} | {filename} | ✅ Preview downloaded |"
+                table_rows[-1] = f"| {current}/{total} | {filename} | ✅ Preview downloaded |"
+            else:
+                table_rows.append(f"| {current}/{total} | {filename} | ⏭ Preview exists |")
 
             progress_pct = int(current / total * 100)
             display_rows = table_rows[-MAX_TABLE_ROWS:]
