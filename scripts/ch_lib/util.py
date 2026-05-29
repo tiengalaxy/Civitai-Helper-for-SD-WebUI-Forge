@@ -49,21 +49,26 @@ def gen_file_sha256(filname):
 
 
 # get preview image
-def download_file(url, path):
+def download_file(url, path, timeout=30):
     printD("Downloading file from: " + url)
-    # get file
-    r = requests.get(url, stream=True, headers=def_headers, proxies=proxies)
-    if not r.ok:
-        printD("Get error code: " + str(r.status_code))
-        printD(r.text)
-        return
-    
-    # write to file
-    with open(os.path.realpath(path), 'wb') as f:
-        r.raw.decode_content = True
-        shutil.copyfileobj(r.raw, f)
+    try:
+        # get file
+        r = requests.get(url, stream=True, headers=def_headers, proxies=proxies, timeout=timeout)
+        if not r.ok:
+            printD("Get error code: " + str(r.status_code))
+            printD(r.text)
+            return
+        
+        # write to file
+        with open(os.path.realpath(path), 'wb') as f:
+            r.raw.decode_content = True
+            shutil.copyfileobj(r.raw, f)
 
-    printD("File downloaded to: " + path)
+        printD("File downloaded to: " + path)
+    except requests.exceptions.Timeout:
+        printD(f"Download timed out after {timeout} seconds: {url}")
+    except Exception as e:
+        printD(f"Download failed: {str(e)}")
 
 # get subfolder list
 def get_subfolders(folder:str) -> list:

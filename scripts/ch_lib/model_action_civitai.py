@@ -29,15 +29,18 @@ def scan_model(scan_model_types, max_size_preview, skip_nsfw_preview):
     for model_type, model_folder in model.folders.items():
         if model_type not in model_types:
             continue
-        for root, dirs, files in os.walk(model_folder, followlinks=True):
-            for filename in files:
-                item = os.path.join(root, filename)
-                base, ext = os.path.splitext(item)
-                if ext in model.exts:
-                    if len(base) > 4:
-                        if base[-4:] == model.vae_suffix:
-                            continue
-                    all_models.append((model_type, item, filename))
+        try:
+            for root, dirs, files in os.walk(model_folder, followlinks=True):
+                for filename in files:
+                    item = os.path.join(root, filename)
+                    base, ext = os.path.splitext(item)
+                    if ext in model.exts:
+                        if len(base) > 4:
+                            if base[-4:] == model.vae_suffix:
+                                continue
+                        all_models.append((model_type, item, filename))
+        except Exception as e:
+            util.printD(f"Error scanning folder {model_folder}: {str(e)}")
 
     total = len(all_models)
     if total == 0:
@@ -52,73 +55,80 @@ def scan_model(scan_model_types, max_size_preview, skip_nsfw_preview):
     table_rows = ""
 
     for idx, (model_type, item, filename) in enumerate(all_models):
-        current = idx + 1
-        base, ext = os.path.splitext(item)
+        try:
+            current = idx + 1
+            base, ext = os.path.splitext(item)
 
-        if model.has_info_and_preview(item):
-            skipped_count = skipped_count + 1
-            table_rows += f"| {current}/{total} | {filename} | ⏭ Skipped (complete) |\n"
-            if current % 10 == 0 or current == total:
+            if model.has_info_and_preview(item):
+                skipped_count = skipped_count + 1
+                table_rows += f"| {current}/{total} | {filename} | ⏭ Skipped (complete) |\n"
+                if current % 10 == 0 or current == total:
+                    progress_pct = int(current / total * 100)
+                    yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n{table_rows}"
+                continue
+
+            info_file = base + civitai.suffix + model.info_ext
+            if not os.path.isfile(info_file):
+                table_rows += f"| {current}/{total} | {filename} | 🔐 Computing SHA256... |\n"
                 progress_pct = int(current / total * 100)
-                yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n{table_rows}"
-            continue
+                yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n{table_rows}"
 
-        info_file = base + civitai.suffix + model.info_ext
-        if not os.path.isfile(info_file):
-            table_rows += f"| {current}/{total} | {filename} | 🔐 Computing SHA256... |\n"
+                hash = util.gen_file_sha256(item)
+
+                if not hash:
+                    table_rows = table_rows.rstrip()
+                    lines = table_rows.split("\n")
+                    if lines:
+                        lines[-1] = lines[-1].replace("🔐 Computing SHA256...", "❌ SHA256 failed")
+                        table_rows = "\n".join(lines) + "\n"
+                    yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n{table_rows}"
+                    continue
+                
+                model_info = civitai.get_model_info_by_hash(hash)
+                if model_type == "ti":
+                    util.printD("Delay 1 second for TI")
+                    time.sleep(1)
+
+                if model_info is None:
+                    table_rows = table_rows.rstrip()
+                    lines = table_rows.split("\n")
+                    if lines:
+                        lines[-1] = lines[-1].replace("🔐 Computing SHA256...", "❌ API failed")
+                        table_rows = "\n".join(lines) + "\n"
+                    yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n{table_rows}"
+                    continue
+
+                model.write_model_info(info_file, model_info)
+
+                table_rows = table_rows.rstrip()
+                lines = table_rows.split("\n")
+                if lines:
+                    lines[-1] = lines[-1].replace("🔐 Computing SHA256...", "✅ Info fetched")
+                    table_rows = "\n".join(lines) + "\n"
+
+            model_count = model_count + 1
+
+            table_rows += f"| {current}/{total} | {filename} | 🖼 Downloading preview... |\n"
             progress_pct = int(current / total * 100)
             yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n{table_rows}"
 
-            hash = util.gen_file_sha256(item)
-
-            if not hash:
-                table_rows = table_rows.rstrip()
-                lines = table_rows.split("\n")
-                if lines:
-                    lines[-1] = lines[-1].replace("🔐 Computing SHA256...", "❌ SHA256 failed")
-                    table_rows = "\n".join(lines) + "\n"
-                yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n{table_rows}"
-                continue
-            
-            model_info = civitai.get_model_info_by_hash(hash)
-            if model_type == "ti":
-                util.printD("Delay 1 second for TI")
-                time.sleep(1)
-
-            if model_info is None:
-                table_rows = table_rows.rstrip()
-                lines = table_rows.split("\n")
-                if lines:
-                    lines[-1] = lines[-1].replace("🔐 Computing SHA256...", "❌ API failed")
-                    table_rows = "\n".join(lines) + "\n"
-                yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n{table_rows}"
-                continue
-
-            model.write_model_info(info_file, model_info)
+            civitai.get_preview_image_by_model_path(item, max_size_preview, skip_nsfw_preview)
+            image_count = image_count + 1
 
             table_rows = table_rows.rstrip()
             lines = table_rows.split("\n")
             if lines:
-                lines[-1] = lines[-1].replace("🔐 Computing SHA256...", "✅ Info fetched")
+                lines[-1] = lines[-1].replace("🖼 Downloading preview...", "✅ Preview downloaded")
                 table_rows = "\n".join(lines) + "\n"
 
-        model_count = model_count + 1
-
-        table_rows += f"| {current}/{total} | {filename} | 🖼 Downloading preview... |\n"
-        progress_pct = int(current / total * 100)
-        yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n{table_rows}"
-
-        civitai.get_preview_image_by_model_path(item, max_size_preview, skip_nsfw_preview)
-        image_count = image_count + 1
-
-        table_rows = table_rows.rstrip()
-        lines = table_rows.split("\n")
-        if lines:
-            lines[-1] = lines[-1].replace("🖼 Downloading preview...", "✅ Preview downloaded")
-            table_rows = "\n".join(lines) + "\n"
-
-        progress_pct = int(current / total * 100)
-        yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n{table_rows}"
+            progress_pct = int(current / total * 100)
+            yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n{table_rows}"
+        
+        except Exception as e:
+            util.printD(f"Error processing model {filename}: {str(e)}")
+            table_rows += f"| {idx+1}/{total} | {filename} | ❌ Error: {str(e)} |\n"
+            progress_pct = int((idx + 1) / total * 100)
+            yield f"🔍 Scanning... **{progress_pct}%** ({idx+1}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n{table_rows}"
 
     yield f"✅ **Done!** Scanned: **{model_count}** | Images: **{image_count}** | Skipped: **{skipped_count}** | Total: **{total}**\n\n| Step | Model | Status |\n|------|-------|--------|\n{table_rows}"
 

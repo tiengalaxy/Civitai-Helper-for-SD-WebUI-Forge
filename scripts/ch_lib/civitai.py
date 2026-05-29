@@ -41,110 +41,131 @@ def get_full_size_image_url(image_url, width):
     return re.sub('/width=\d+/', '/width=' + str(width) + '/', image_url)
 
 
-def get_model_info_by_hash(hash:str):
+def get_model_info_by_hash(hash:str, timeout=30):
     util.printD("Request model info from civitai")
 
     if not hash:
         util.printD("hash is empty")
         return
 
-    url_dict = get_url_dict()
-    r = requests.get(url_dict["hash"]+hash, headers=util.def_headers, proxies=util.proxies)
-    if not r.ok:
-        if r.status_code == 404:
-            util.printD("Civitai does not have this model")
-            return {}
-        else:
-            util.printD("Get error code: " + str(r.status_code))
+    try:
+        url_dict = get_url_dict()
+        r = requests.get(url_dict["hash"]+hash, headers=util.def_headers, proxies=util.proxies, timeout=timeout)
+        if not r.ok:
+            if r.status_code == 404:
+                util.printD("Civitai does not have this model")
+                return {}
+            else:
+                util.printD("Get error code: " + str(r.status_code))
+                util.printD(r.text)
+                return
+
+        content = None
+        try:
+            content = r.json()
+        except Exception as e:
+            util.printD("Parse response json failed")
+            util.printD(str(e))
+            util.printD("response:")
             util.printD(r.text)
             return
-
-    content = None
-    try:
-        content = r.json()
+        
+        if not content:
+            util.printD("error, content from civitai is None")
+            return
+        
+        return content
+    except requests.exceptions.Timeout:
+        util.printD(f"API request timed out after {timeout} seconds")
+        return
     except Exception as e:
-        util.printD("Parse response json failed")
-        util.printD(str(e))
-        util.printD("response:")
-        util.printD(r.text)
+        util.printD(f"API request failed: {str(e)}")
         return
-    
-    if not content:
-        util.printD("error, content from civitai is None")
-        return
-    
-    return content
 
 
 
-def get_model_info_by_id(id:str) -> dict:
+def get_model_info_by_id(id:str, timeout=30) -> dict:
     util.printD("Request model info from civitai")
 
     if not id:
         util.printD("id is empty")
         return
 
-    url_dict = get_url_dict()
-    r = requests.get(url_dict["modelId"]+str(id), headers=util.def_headers, proxies=util.proxies)
-    if not r.ok:
-        if r.status_code == 404:
-            util.printD("Civitai does not have this model")
-            return {}
-        else:
-            util.printD("Get error code: " + str(r.status_code))
+    try:
+        url_dict = get_url_dict()
+        r = requests.get(url_dict["modelId"]+str(id), headers=util.def_headers, proxies=util.proxies, timeout=timeout)
+        if not r.ok:
+            if r.status_code == 404:
+                util.printD("Civitai does not have this model")
+                return {}
+            else:
+                util.printD("Get error code: " + str(r.status_code))
+                util.printD(r.text)
+                return
+
+        content = None
+        try:
+            content = r.json()
+        except Exception as e:
+            util.printD("Parse response json failed")
+            util.printD(str(e))
+            util.printD("response:")
             util.printD(r.text)
             return
-
-    content = None
-    try:
-        content = r.json()
+        
+        if not content:
+            util.printD("error, content from civitai is None")
+            return
+        
+        return content
+    except requests.exceptions.Timeout:
+        util.printD(f"API request timed out after {timeout} seconds")
+        return
     except Exception as e:
-        util.printD("Parse response json failed")
-        util.printD(str(e))
-        util.printD("response:")
-        util.printD(r.text)
+        util.printD(f"API request failed: {str(e)}")
         return
-    
-    if not content:
-        util.printD("error, content from civitai is None")
-        return
-    
-    return content
 
 
-def get_version_info_by_version_id(id:str) -> dict:
+def get_version_info_by_version_id(id:str, timeout=30) -> dict:
     util.printD("Request version info from civitai")
 
     if not id:
         util.printD("id is empty")
         return
 
-    url_dict = get_url_dict()
-    r = requests.get(url_dict["modelVersionId"]+str(id), headers=util.def_headers, proxies=util.proxies)
-    if not r.ok:
-        if r.status_code == 404:
-            util.printD("Civitai does not have this model version")
-            return {}
-        else:
-            util.printD("Get error code: " + str(r.status_code))
+    try:
+        url_dict = get_url_dict()
+        r = requests.get(url_dict["modelVersionId"]+str(id), headers=util.def_headers, proxies=util.proxies, timeout=timeout)
+        if not r.ok:
+            if r.status_code == 404:
+                util.printD("Civitai does not have this model version")
+                return {}
+            else:
+                util.printD("Get error code: " + str(r.status_code))
+                util.printD(r.text)
+                return
+
+        content = None
+        try:
+            content = r.json()
+        except Exception as e:
+            util.printD("Parse response json failed")
+            util.printD(str(e))
+            util.printD("response:")
             util.printD(r.text)
             return
-
-    content = None
-    try:
-        content = r.json()
+        
+        if not content:
+            util.printD("error, content from civitai is None")
+            return
+        
+        return content
+    except requests.exceptions.Timeout:
+        util.printD(f"API request timed out after {timeout} seconds")
+        return
     except Exception as e:
-        util.printD("Parse response json failed")
-        util.printD(str(e))
-        util.printD("response:")
-        util.printD(r.text)
+        util.printD(f"API request failed: {str(e)}")
         return
-    
-    if not content:
-        util.printD("error, content from civitai is None")
-        return
-    
-    return content
 
 
 def get_version_info_by_model_id(id:str) -> dict:
