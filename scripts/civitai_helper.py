@@ -24,8 +24,17 @@ extension_path = scripts.basedir()
 
 model.get_custom_model_folder()
 
+# 用于防止标签页和设置被重复注册的标志位
+_ui_registered = False
+_settings_registered = False
+
 
 def on_ui_settings():
+    global _settings_registered
+    if _settings_registered:
+        return
+    _settings_registered = True
+    
     ch_section = ("civitai_helper", "Civitai Helper")
     shared.opts.add_option("ch_max_size_preview", shared.OptionInfo(True, "Download Max Size Preview", gr.Checkbox, {"interactive": True}, section=ch_section))
     shared.opts.add_option("ch_skip_nsfw_preview", shared.OptionInfo(False, "Skip NSFW Preview Images", gr.Checkbox, {"interactive": True}, section=ch_section))
@@ -37,6 +46,11 @@ def on_ui_settings():
     shared.opts.add_option("ch_lora_strength", shared.OptionInfo(1.0, "Default LoRA Strength", gr.Slider, {"interactive": True, "minimum": 0.0, "maximum": 2.0, "step": 0.05}, section=ch_section))
 
 def on_ui_tabs():
+    global _ui_registered
+    if _ui_registered:
+        return None
+    _ui_registered = True
+    
     txt2img_prompt = modules.ui.txt2img_paste_fields[0][0]
     txt2img_neg_prompt = modules.ui.txt2img_paste_fields[1][0]
     img2img_prompt = modules.ui.img2img_paste_fields[0][0]
@@ -113,7 +127,7 @@ def on_ui_tabs():
 
         return [model_info, model_name, model_type, dl_subfolder_drop.update(choices=subfolders), dl_version_drop.update(choices=version_strs)]
 
-    with gr.Blocks(analytics_enabled=False) as civitai_helper:
+    with gr.Blocks(analytics_enabled=False, elem_id="civitai_helper_tab") as civitai_helper:
 
         model_types = list(model.folders.keys())
         no_info_model_names = civitai.get_model_names_by_input("ckp", False)
@@ -232,8 +246,6 @@ def on_ui_tabs():
         js_force_update_ext_btn.click(js_action_civitai.force_update_extension, inputs=[js_msg_txtbox], outputs=py_msg_txtbox)
 
     return (civitai_helper , "Civitai Helper", "civitai_helper"),
-
-
 
 
 script_callbacks.on_ui_settings(on_ui_settings)
