@@ -146,6 +146,10 @@ def get_model_path_by_search_term(model_type:str, search_term:str):
     if has_hash and len(splited_path) > 1:
         model_sub_path = " ".join(splited_path[:-1])
 
+    model_sub_path = model_sub_path.replace("\\\\", "\\")
+    if os.sep != "\\":
+        model_sub_path = model_sub_path.replace("\\", os.sep)
+
     if model_sub_path[:1] == "/":
         model_sub_path = model_sub_path[1:]
 

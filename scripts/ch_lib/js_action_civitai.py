@@ -76,12 +76,12 @@ def add_trigger_words(msg):
         util.printD(f"Failed to get model info for {model_type} {search_term}")
         return [prompt, prompt]
 
-    trainedWords = model_info.get("trainedWords", [])
-    if not trainedWords:
+    words = _extract_trigger_words(model_info)
+    if not words:
         util.printD(f"No trainedWords from info file for {model_type} {search_term}")
         return [prompt, prompt]
 
-    trigger_words = ", ".join(trainedWords)
+    trigger_words = ", ".join(words)
     new_prompt = prompt + " " + trigger_words
     util.printD("trigger_words: " + trigger_words)
     util.printD("prompt: " + prompt)
@@ -253,7 +253,36 @@ def remove_model_by_path(msg):
     return output
 
 
+def _extract_trigger_words(model_info):
+    if not model_info:
+        return []
+
+    trainedWords = model_info.get("trainedWords", [])
+    if not trainedWords:
+        return []
+
+    words = []
+    for item in trainedWords:
+        if isinstance(item, str) and item.strip():
+            words.append(item.strip())
+        elif isinstance(item, dict):
+            word = item.get("word", "")
+            if word and isinstance(word, str) and word.strip():
+                words.append(word.strip())
+    return words
+
+
+def _normalize_search_term(search_term):
+    if not search_term:
+        return search_term
+    search_term = search_term.replace("\\\\", "\\")
+    if os.sep != "\\":
+        search_term = search_term.replace("\\", os.sep)
+    return search_term
+
+
 def _get_lora_name(search_term, model_path):
+    search_term = _normalize_search_term(search_term)
     if search_term:
         parts = search_term.split()
         filename = parts[0] if parts else ""
@@ -275,25 +304,30 @@ def apply_lora_with_strength(msg):
     strength = result.get("strength", 1.0)
     model_info, model_type, search_term, model_path = _load_model_info_from_msg(result)
 
-    if not model_info:
-        util.printD(f"Failed to get model info for {model_type} {search_term}")
-        return [prompt, prompt]
-
     lora_name = _get_lora_name(search_term, model_path)
-    trainedWords = model_info.get("trainedWords", [])
-    trigger_words = ", ".join(trainedWords) if trainedWords else ""
     lora_tag = f"<lora:{lora_name}:{strength}>" if lora_name else ""
 
-    if trigger_words and lora_tag:
-        new_prompt = prompt + " " + trigger_words + " " + lora_tag
-    elif trigger_words:
-        new_prompt = prompt + " " + trigger_words
-    elif lora_tag:
-        new_prompt = prompt + " " + lora_tag
+    trigger_words = ""
+    if model_info:
+        words = _extract_trigger_words(model_info)
+        trigger_words = ", ".join(words) if words else ""
+        util.printD(f"trainedWords extracted: {words}")
+    else:
+        util.printD(f"Failed to get model info for {model_type} {search_term}, applying LoRA tag only")
+
+    parts = []
+    if lora_tag:
+        parts.append(lora_tag)
+    if trigger_words:
+        parts.append(trigger_words)
+
+    if parts:
+        new_prompt = prompt + " " + " ".join(parts)
     else:
         new_prompt = prompt
 
     util.printD(f"Applied LoRA with strength {strength}: {lora_name}")
+    util.printD(f"trigger_words: {trigger_words}")
     util.printD(f"new_prompt: {new_prompt}")
 
     return [new_prompt, new_prompt]
@@ -311,9 +345,7 @@ def get_trigger_words(msg):
 
     trigger_words = []
     if model_info:
-        trainedWords = model_info.get("trainedWords", [])
-        if trainedWords:
-            trigger_words = trainedWords
+        trigger_words = _extract_trigger_words(model_info)
 
     util.printD(f"Trigger words: {trigger_words}")
     return msg_handler.build_py_msg("get_trigger_words", {"trigger_words": trigger_words})
@@ -405,9 +437,7 @@ def batch_get_model_data(msg):
 
             model_info = civitai.load_model_info_by_search_term(model_type, search_term)
             if model_info:
-                trainedWords = model_info.get("trainedWords", [])
-                if trainedWords:
-                    trigger_words = trainedWords
+                trigger_words = _extract_trigger_words(model_info)
 
             base, ext = os.path.splitext(model_path)
             note_path = base + ".ch_note"

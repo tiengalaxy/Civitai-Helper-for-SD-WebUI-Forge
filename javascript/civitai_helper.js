@@ -799,9 +799,10 @@ onUiLoaded(() => {
 
                 search_term = search_term_node.innerHTML.trim();
                 if (!search_term) { continue; }
-                search_term = search_term.replaceAll("\\", "\\\\");
 
-                let buttons = create_card_buttons(model_type, search_term);
+                let escaped_search_term = search_term.replaceAll("\\", "\\\\");
+
+                let buttons = create_card_buttons(model_type, escaped_search_term);
                 for (let btn of buttons) {
                     button_row.appendChild(btn);
                 }

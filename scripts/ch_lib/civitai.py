@@ -159,6 +159,13 @@ def get_version_info_by_model_id(id:str) -> dict:
     return version_info
 
 
+def _normalize_search_term_path(path_part):
+    path_part = path_part.replace("\\\\", "\\")
+    if os.sep != "\\":
+        path_part = path_part.replace("\\", os.sep)
+    return path_part
+
+
 def load_model_info_by_search_term(model_type, search_term):
     util.printD(f"Load model info of {search_term} in {model_type}")
     if model_type not in model.folders.keys():
@@ -167,6 +174,7 @@ def load_model_info_by_search_term(model_type, search_term):
 
     parts = search_term.split()
     path_part = parts[0] if parts else search_term
+    path_part = _normalize_search_term_path(path_part)
 
     base, ext = os.path.splitext(path_part)
     model_info_base = base
