@@ -404,8 +404,13 @@ def search_local_model_info_by_version_id(folder:str, version_id:int, walk:bool=
 def _safe_get(d, key, default=None):
     if not d:
         return default
+    if key not in d:
+        return default
     val = d.get(key, default)
-    return default if not val else val
+    # Only treat None as missing; allow falsy values like 0, False, ""
+    if val is None:
+        return default
+    return val
 
 
 def check_model_new_version_by_path(model_path:str, delay:float=1) -> tuple:

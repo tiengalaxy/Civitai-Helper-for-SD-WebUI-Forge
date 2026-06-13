@@ -93,11 +93,27 @@ def scan_model(scan_model_types, max_size_preview, skip_nsfw_preview, force_over
                     util.printD("Delay 1 second for TI")
                     time.sleep(1)
 
-                if model_info is None:
-                    table_rows[-1] = f"| {current}/{total} | {filename} | ❌ API failed |"
+                if not model_info:
+                    table_rows[-1] = f"| {current}/{total} | {filename} | ❌ API failed or model not found |"
                     display_rows = table_rows[-MAX_TABLE_ROWS:]
                     yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n" + "\n".join(display_rows)
                     continue
+
+                # Enhance version info with model-level data (trainedWords, modelId, etc.)
+                model_id_from_version = model_info.get("modelId")
+                if model_id_from_version:
+                    full_model_info = civitai.get_model_info_by_id(str(model_id_from_version))
+                    if full_model_info and "modelVersions" in full_model_info:
+                        # Merge model-level trainedWords into version info if missing
+                        if not model_info.get("trainedWords"):
+                            for version in full_model_info["modelVersions"]:
+                                if str(version.get("id")) == str(model_info.get("id")):
+                                    if version.get("trainedWords"):
+                                        model_info["trainedWords"] = version["trainedWords"]
+                                    break
+                        # Ensure modelId is present
+                        if "modelId" not in model_info:
+                            model_info["modelId"] = model_id_from_version
 
                 model.write_model_info(info_file, model_info)
                 table_rows[-1] = f"| {current}/{total} | {filename} | ✅ Info fetched |"

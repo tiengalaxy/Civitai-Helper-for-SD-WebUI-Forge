@@ -685,6 +685,9 @@ onUiLoaded(() => {
                 case "hypernetworks": active_extra_tab_type = "hyper"; break;
                 case "checkpoints": active_extra_tab_type = "ckp"; break;
                 case "lora": active_extra_tab_type = "lora"; break;
+                case "controlnet": active_extra_tab_type = "controlnet"; break;
+                case "vae": active_extra_tab_type = "vae"; break;
+                case "upscalers": active_extra_tab_type = "upscaler"; break;
             }
 
             for (const js_model_type of model_type_list) {
@@ -693,6 +696,9 @@ onUiLoaded(() => {
                     case "hypernetworks": model_type = "hyper"; break;
                     case "checkpoints": model_type = "ckp"; break;
                     case "lora": model_type = "lora"; break;
+                    case "controlnet": model_type = "controlnet"; break;
+                    case "vae": model_type = "vae"; break;
+                    case "upscalers": model_type = "upscaler"; break;
                 }
                 if (!model_type) { continue; }
                 if (model_type != active_extra_tab_type) { continue; }
@@ -720,7 +726,9 @@ onUiLoaded(() => {
                     search_term = search_term_node.innerHTML.trim();
                     if (!search_term) { continue; }
 
-                    let buttons = create_card_buttons(model_type, search_term);
+                    let escaped_search_term = search_term.replaceAll("\\", "\\\\");
+
+                    let buttons = create_card_buttons(model_type, escaped_search_term);
                     for (let btn of buttons) {
                         button_row.appendChild(btn);
                     }
@@ -772,6 +780,9 @@ onUiLoaded(() => {
                 case "hypernetworks": model_type = "hyper"; break;
                 case "checkpoints": model_type = "ckp"; break;
                 case "lora": model_type = "lora"; break;
+                case "controlnet": model_type = "controlnet"; break;
+                case "vae": model_type = "vae"; break;
+                case "upscalers": model_type = "upscaler"; break;
             }
 
             if (!model_type) { continue; }
