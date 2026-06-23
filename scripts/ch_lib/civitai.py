@@ -172,8 +172,18 @@ def load_model_info_by_search_term(model_type, search_term):
         util.printD("unknow model type: " + model_type)
         return
 
-    parts = search_term.split()
-    path_part = parts[0] if parts else search_term
+    # Use same hash-detection logic as model.get_model_path_by_search_term
+    has_hash = True
+    if model_type == "hyper":
+        has_hash = False
+    elif search_term.endswith(model.exts):
+        has_hash = False
+
+    splited_path = search_term.split()
+    path_part = splited_path[0] if splited_path else search_term
+    if has_hash and len(splited_path) > 1:
+        path_part = " ".join(splited_path[:-1])
+
     path_part = _normalize_search_term_path(path_part)
 
     base, ext = os.path.splitext(path_part)

@@ -51,7 +51,7 @@ function get_ch_py_msg(){
     return "";
 }
 
-const get_new_ch_py_msg = (max_count=5) => new Promise((resolve, reject) => {
+const get_new_ch_py_msg = (max_count=20) => new Promise((resolve, reject) => {
     let count = 0;
     let new_msg = "";
     let find_msg = false;
@@ -73,7 +73,7 @@ const get_new_ch_py_msg = (max_count=5) => new Promise((resolve, reject) => {
             reject('');
             clearInterval(interval);
         }
-    }, 1000);
+    }, 300);
 })
 
 function getActiveTabType() {
@@ -152,18 +152,30 @@ async function open_model_url(event, model_type, search_term){
 
     let new_py_msg = "";
     try {
-        new_py_msg = await get_new_ch_py_msg();
-    } catch (error) {}
+        new_py_msg = await get_new_ch_py_msg(30);
+    } catch (error) {
+        console.error("Civitai Helper: open_model_url timed out waiting for response");
+    }
 
     ch_request_lock = false;
 
     if (new_py_msg) {
         try {
             let py_msg_json = JSON.parse(new_py_msg);
-            if (py_msg_json && py_msg_json.content && py_msg_json.content.url) {
-                window.open(py_msg_json.content.url, "_blank");
+            if (py_msg_json && py_msg_json.content) {
+                if (py_msg_json.content.url) {
+                    window.open(py_msg_json.content.url, "_blank");
+                } else if (py_msg_json.content.error) {
+                    console.error("Civitai Helper: " + py_msg_json.content.error);
+                    alert("Civitai Helper: " + py_msg_json.content.error);
+                }
             }
-        } catch(e) {}
+        } catch(e) {
+            console.error("Civitai Helper: Failed to parse open_url response", e);
+        }
+    } else {
+        console.error("Civitai Helper: No response from server for open_model_url");
+        alert("Civitai Helper: Failed to open Civitai page. Please check if the model has been scanned.");
     }
 }
 
@@ -272,18 +284,30 @@ async function open_model_url_with_path(event, model_type, model_path){
 
     let new_py_msg = "";
     try {
-        new_py_msg = await get_new_ch_py_msg();
-    } catch (error) {}
+        new_py_msg = await get_new_ch_py_msg(30);
+    } catch (error) {
+        console.error("Civitai Helper: open_model_url_with_path timed out waiting for response");
+    }
 
     ch_request_lock = false;
 
     if (new_py_msg) {
         try {
             let py_msg_json = JSON.parse(new_py_msg);
-            if (py_msg_json && py_msg_json.content && py_msg_json.content.url) {
-                window.open(py_msg_json.content.url, "_blank");
+            if (py_msg_json && py_msg_json.content) {
+                if (py_msg_json.content.url) {
+                    window.open(py_msg_json.content.url, "_blank");
+                } else if (py_msg_json.content.error) {
+                    console.error("Civitai Helper: " + py_msg_json.content.error);
+                    alert("Civitai Helper: " + py_msg_json.content.error);
+                }
             }
-        } catch(e) {}
+        } catch(e) {
+            console.error("Civitai Helper: Failed to parse open_url response", e);
+        }
+    } else {
+        console.error("Civitai Helper: No response from server for open_model_url_with_path");
+        alert("Civitai Helper: Failed to open Civitai page. Please check if the model has been scanned.");
     }
 }
 
@@ -515,7 +539,7 @@ function ch_apply_cached_data_to_cards(cards, model_type) {
         }
         if (!search_term_node) continue;
 
-        let search_term = search_term_node.innerHTML.trim();
+        let search_term = search_term_node.textContent.trim();
         if (!search_term) continue;
 
         let cache_key = model_type + "|" + search_term;
@@ -558,7 +582,9 @@ onUiLoaded(() => {
         open_url_node.innerHTML = "🌐";
         open_url_node.className = "card-button";
         open_url_node.title = "Open Civitai page";
-        open_url_node.setAttribute("onclick","open_model_url(event, '"+model_type+"', '"+search_term+"')");
+        open_url_node.addEventListener("click", function(event) {
+            open_model_url(event, model_type, search_term);
+        });
         buttons.push(open_url_node);
 
         let add_trigger_words_node = document.createElement("a");
@@ -566,7 +592,9 @@ onUiLoaded(() => {
         add_trigger_words_node.innerHTML = "💡";
         add_trigger_words_node.className = "card-button";
         add_trigger_words_node.title = "Add trigger words to prompt";
-        add_trigger_words_node.setAttribute("onclick","add_trigger_words(event, '"+model_type+"', '"+search_term+"')");
+        add_trigger_words_node.addEventListener("click", function(event) {
+            add_trigger_words(event, model_type, search_term);
+        });
         buttons.push(add_trigger_words_node);
 
         let use_preview_prompt_node = document.createElement("a");
@@ -574,7 +602,9 @@ onUiLoaded(() => {
         use_preview_prompt_node.innerHTML = "🏷️";
         use_preview_prompt_node.className = "card-button";
         use_preview_prompt_node.title = "Use prompt from preview image";
-        use_preview_prompt_node.setAttribute("onclick","use_preview_prompt(event, '"+model_type+"', '"+search_term+"')");
+        use_preview_prompt_node.addEventListener("click", function(event) {
+            use_preview_prompt(event, model_type, search_term);
+        });
         buttons.push(use_preview_prompt_node);
 
         if (model_type === "lora") {
@@ -583,7 +613,9 @@ onUiLoaded(() => {
             apply_lora_node.innerHTML = "⚡";
             apply_lora_node.className = "card-button";
             apply_lora_node.title = "Apply LoRA with strength to prompt";
-            apply_lora_node.setAttribute("onclick","ch_apply_lora_with_strength(event, '"+model_type+"', '"+search_term+"')");
+            apply_lora_node.addEventListener("click", function(event) {
+                ch_apply_lora_with_strength(event, model_type, search_term);
+            });
             buttons.push(apply_lora_node);
         }
 
@@ -592,7 +624,9 @@ onUiLoaded(() => {
         note_node.innerHTML = "📝";
         note_node.className = "card-button";
         note_node.title = "Edit note for this model";
-        note_node.setAttribute("onclick","ch_toggle_model_note(event, '"+model_type+"', '"+search_term+"')");
+        note_node.addEventListener("click", function(event) {
+            ch_toggle_model_note(event, model_type, search_term);
+        });
         buttons.push(note_node);
 
         let remove_card_node = document.createElement("a");
@@ -600,7 +634,9 @@ onUiLoaded(() => {
         remove_card_node.innerHTML = "❌";
         remove_card_node.className = "card-button";
         remove_card_node.title = "Remove this model";
-        remove_card_node.setAttribute("onclick","remove_card(event, '"+model_type+"', '"+search_term+"')");
+        remove_card_node.addEventListener("click", function(event) {
+            remove_card(event, model_type, search_term);
+        });
         buttons.push(remove_card_node);
 
         return buttons;
@@ -723,7 +759,7 @@ onUiLoaded(() => {
                     search_term_node = card.querySelector(".actions .additional .search_term");
                     if (!search_term_node){ continue; }
 
-                    search_term = search_term_node.innerHTML.trim();
+                    search_term = search_term_node.textContent.trim();
                     if (!search_term) { continue; }
 
                     let escaped_search_term = search_term.replaceAll("\\", "\\\\");
@@ -808,12 +844,10 @@ onUiLoaded(() => {
                 search_term_node = card.querySelector(".actions .additional .search_terms");
                 if (!search_term_node){ continue; }
 
-                search_term = search_term_node.innerHTML.trim();
+                search_term = search_term_node.textContent.trim();
                 if (!search_term) { continue; }
 
-                let escaped_search_term = search_term.replaceAll("\\", "\\\\");
-
-                let buttons = create_card_buttons(model_type, escaped_search_term);
+                let buttons = create_card_buttons(model_type, search_term);
                 for (let btn of buttons) {
                     button_row.appendChild(btn);
                 }

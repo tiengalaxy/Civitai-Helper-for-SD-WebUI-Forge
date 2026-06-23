@@ -29,18 +29,36 @@ def open_model_url(msg, open_url_with_js):
     result = msg_handler.parse_js_msg(msg)
     if not result:
         util.printD("Parsing js ms failed")
-        return
+        return msg_handler.build_py_msg("open_url", {"url": "", "error": "Failed to parse request message"})
 
     model_info, model_type, search_term, model_path = _load_model_info_from_msg(result)
 
     if not model_info:
         util.printD(f"Failed to get model info for {model_type} {search_term}")
-        return ""
+        return msg_handler.build_py_msg("open_url", {"url": "", "error": f"Model info not found. Please scan this model first: {model_type} {search_term}"})
 
     model_id = model_info.get("modelId")
     if not model_id:
-        util.printD(f"Failed to get model id from info file for {model_type} {search_term}")
-        return ""
+        util.printD(f"modelId not found in info file for {model_type} {search_term}, trying fallback...")
+        version_id = model_info.get("id")
+        if version_id:
+            try:
+                version_info = civitai.get_version_info_by_version_id(str(version_id))
+                if version_info:
+                    model_id = version_info.get("modelId")
+                    if model_id:
+                        util.printD(f"Recovered modelId {model_id} from version API")
+                        model_info["modelId"] = model_id
+                        if model_path:
+                            info_file = os.path.splitext(model_path)[0] + civitai.suffix + model.info_ext
+                            model.write_model_info(info_file, model_info)
+                            util.printD(f"Updated info file with recovered modelId: {info_file}")
+            except Exception as e:
+                util.printD(f"Fallback to get modelId failed: {str(e)}")
+
+        if not model_id:
+            util.printD(f"Failed to get model id for {model_type} {search_term}")
+            return msg_handler.build_py_msg("open_url", {"url": "", "error": f"Model ID not found. Please re-scan this model with Force Overwrite: {model_type} {search_term}"})
 
     url = civitai.get_url_dict()["modelPage"]+str(model_id)
 
@@ -51,10 +69,12 @@ def open_model_url(msg, open_url_with_js):
     if not open_url_with_js:
         util.printD("Open Url: " + url)
         webbrowser.open_new_tab(url)
+        content["url"] = url
     else:
         util.printD("Send Url to js")
         content["url"] = url
-        output = msg_handler.build_py_msg("open_url", content)
+
+    output = msg_handler.build_py_msg("open_url", content)
 
     util.printD("End open_model_url")
     return output
