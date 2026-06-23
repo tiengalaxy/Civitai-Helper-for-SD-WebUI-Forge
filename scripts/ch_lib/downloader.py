@@ -48,7 +48,8 @@ def dl(url, folder, filename, filepath):
         filename = ""
         if "Content-Disposition" in rh.headers.keys():
             cd = rh.headers["Content-Disposition"].encode('latin1').decode('utf-8', errors='ignore')
-            filename = cd.split("=")[1].strip('"')
+            if "=" in cd:
+                filename = cd.split("=", 1)[1].strip('"')
             if not filename:
                 util.printD("Fail to get file name from Content-Disposition: " + cd)
                 return

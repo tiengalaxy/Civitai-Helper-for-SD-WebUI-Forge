@@ -528,7 +528,9 @@ async function ch_batch_fetch_model_data(model_type, search_terms) {
                 }
             }
         }
-    } catch(e) {}
+    } catch(e) {
+        console.error("Civitai Helper: Failed to batch fetch model data", e);
+    }
 }
 
 function ch_apply_cached_data_to_cards(cards, model_type) {
@@ -549,7 +551,7 @@ function ch_apply_cached_data_to_cards(cards, model_type) {
         if (data.trigger_words && data.trigger_words.length > 0 && !card.querySelector(".ch-trigger-tooltip")) {
             let tooltip = document.createElement("div");
             tooltip.className = "ch-trigger-tooltip";
-            tooltip.innerHTML = "🔑 " + data.trigger_words.join(", ");
+            tooltip.textContent = "🔑 " + data.trigger_words.join(", ");
             card.appendChild(tooltip);
         }
 
@@ -750,8 +752,8 @@ onUiLoaded(() => {
                     button_row = card.querySelector(".button-row");
                     if (!button_row){ continue; }
 
-                    let atags = button_row.querySelectorAll("a");
-                    if (atags && atags.length) {
+                    let ch_buttons = button_row.querySelectorAll("a.card-button");
+                    if (ch_buttons && ch_buttons.length) {
                         ch_apply_cached_data_to_cards([card], model_type);
                         continue;
                     }
@@ -762,9 +764,7 @@ onUiLoaded(() => {
                     search_term = search_term_node.textContent.trim();
                     if (!search_term) { continue; }
 
-                    let escaped_search_term = search_term.replaceAll("\\", "\\\\");
-
-                    let buttons = create_card_buttons(model_type, escaped_search_term);
+                    let buttons = create_card_buttons(model_type, search_term);
                     for (let btn of buttons) {
                         button_row.appendChild(btn);
                     }
@@ -835,8 +835,8 @@ onUiLoaded(() => {
                 if (!button_row){ continue; }
                 button_row.style.flexWrap = "wrap";
 
-                let atags = button_row.querySelectorAll("a");
-                if (atags && atags.length) {
+                let ch_buttons = button_row.querySelectorAll("a.card-button");
+                if (ch_buttons && ch_buttons.length) {
                     ch_apply_cached_data_to_cards([card], model_type);
                     continue;
                 }

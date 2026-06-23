@@ -87,7 +87,7 @@ def add_trigger_words(msg):
     result = msg_handler.parse_js_msg(msg)
     if not result:
         util.printD("Parsing js ms failed")
-        return
+        return ["", ""]
 
     prompt = result.get("prompt", "")
     model_info, model_type, search_term, model_path = _load_model_info_from_msg(result)
@@ -119,7 +119,7 @@ def use_preview_image_prompt(msg):
     result = msg_handler.parse_js_msg(msg)
     if not result:
         util.printD("Parsing js ms failed")
-        return
+        return ["", "", "", ""]
 
     prompt = result.get("prompt", "")
     neg_prompt = result.get("neg_prompt", "")
@@ -270,7 +270,7 @@ def remove_model_by_path(msg):
     util.printD(f"{len(related_paths)} file removed")
 
     util.printD("End remove_model_by_path")
-    return output
+    return "Done"
 
 
 def _extract_trigger_words(model_info):
@@ -318,7 +318,7 @@ def apply_lora_with_strength(msg):
     result = msg_handler.parse_js_msg(msg)
     if not result:
         util.printD("Parsing js msg failed")
-        return
+        return ["", ""]
 
     prompt = result.get("prompt", "")
     strength = result.get("strength", 1.0)
@@ -479,8 +479,12 @@ def batch_get_model_data(msg):
     return msg_handler.build_py_msg("batch_get_model_data", {"items": items})
 
 
+def _get_extensions_dir():
+    return os.path.join(os.getcwd(), "extensions")
+
+
 def _validate_ext_path(ext_name, ext_path):
-    extensions_dir = os.path.join(root_path, "extensions")
+    extensions_dir = _get_extensions_dir()
     real_ext_path = os.path.realpath(ext_path)
     real_extensions_dir = os.path.realpath(extensions_dir)
     if not real_ext_path.startswith(real_extensions_dir):
@@ -504,7 +508,7 @@ def uninstall_extension(msg):
     if not ext_name:
         return "Failed to uninstall: extension name is empty"
 
-    extensions_dir = os.path.join(root_path, "extensions")
+    extensions_dir = _get_extensions_dir()
     ext_path = os.path.join(extensions_dir, ext_name)
 
     if not _validate_ext_path(ext_name, ext_path):
@@ -535,7 +539,7 @@ def force_update_extension(msg):
     if not ext_name:
         return "Failed to update: extension name is empty"
 
-    extensions_dir = os.path.join(root_path, "extensions")
+    extensions_dir = _get_extensions_dir()
     ext_path = os.path.join(extensions_dir, ext_name)
 
     if not _validate_ext_path(ext_name, ext_path):

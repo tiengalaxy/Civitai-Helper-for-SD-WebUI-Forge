@@ -162,7 +162,7 @@ def get_model_path_by_search_term(model_type:str, search_term:str):
             model_sub_path = model_sub_path[1:]
 
     if model_type == "hyper":
-        if not model_sub_path.endswith(".pt"):
+        if not model_sub_path.endswith(exts):
             model_sub_path = model_sub_path+".pt"
 
     model_folder = folders[model_type]

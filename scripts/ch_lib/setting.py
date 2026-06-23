@@ -74,14 +74,20 @@ def load():
     data = json_data
 
     # check for new key
-    if "proxy" not in data["general"].keys():
-        data["general"]["proxy"] = ""
+    general = data.get("general", {})
+    model_settings = data.get("model", {})
 
-    if "check_new_ver_exist_in_all_folder" not in data["model"].keys():
-        data["model"]["check_new_ver_exist_in_all_folder"] = False
+    if "proxy" not in general:
+        general["proxy"] = ""
+        data["general"] = general
 
-    if "civitai_domain" not in data["general"].keys():
-        data["general"]["civitai_domain"] = "civitai.red"
+    if "check_new_ver_exist_in_all_folder" not in model_settings:
+        model_settings["check_new_ver_exist_in_all_folder"] = False
+        data["model"] = model_settings
+
+    if "civitai_domain" not in general:
+        general["civitai_domain"] = "civitai.red"
+        data["general"] = general
 
 
 
