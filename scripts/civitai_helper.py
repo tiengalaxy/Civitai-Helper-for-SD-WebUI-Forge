@@ -43,10 +43,17 @@ def on_ui_tabs():
         return None
     _ui_registered = True
 
-    txt2img_prompt = modules.ui.txt2img_paste_fields[0][0]
-    txt2img_neg_prompt = modules.ui.txt2img_paste_fields[1][0]
-    img2img_prompt = modules.ui.img2img_paste_fields[0][0]
-    img2img_neg_prompt = modules.ui.img2img_paste_fields[1][0]
+    try:
+        txt2img_prompt = modules.ui.txt2img_paste_fields[0][0]
+        txt2img_neg_prompt = modules.ui.txt2img_paste_fields[1][0]
+        img2img_prompt = modules.ui.img2img_paste_fields[0][0]
+        img2img_neg_prompt = modules.ui.img2img_paste_fields[1][0]
+    except (IndexError, AttributeError, TypeError) as e:
+        util.printD(f"Failed to access paste_fields, using fallback: {str(e)}")
+        txt2img_prompt = None
+        txt2img_neg_prompt = None
+        img2img_prompt = None
+        img2img_neg_prompt = None
 
     max_size_preview = shared.opts.data.get("ch_max_size_preview", True)
     skip_nsfw_preview = shared.opts.data.get("ch_skip_nsfw_preview", False)

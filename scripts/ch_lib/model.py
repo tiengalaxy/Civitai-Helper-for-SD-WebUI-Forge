@@ -26,6 +26,20 @@ folders = {
     "upscaler": os.path.join(root_path, "models", "ESRGAN"),
 }
 
+# Forge Neo compatibility: embeddings moved to models/embeddings
+def _resolve_ti_folder():
+    """Resolve Textual Inversion folder with Neo fallback"""
+    classic_path = os.path.join(root_path, "embeddings")
+    neo_path = os.path.join(root_path, "models", "embeddings")
+    if os.path.isdir(classic_path):
+        return classic_path
+    if os.path.isdir(neo_path):
+        util.printD(f"Using Forge Neo embeddings path: {neo_path}")
+        return neo_path
+    return classic_path  # fallback to default even if not exists
+
+folders["ti"] = _resolve_ti_folder()
+
 exts = (".bin", ".pt", ".safetensors", ".ckpt", ".pth")
 info_ext = ".info"
 vae_suffix = ".vae"

@@ -23,15 +23,22 @@ function ch_sd_version() {
     return extract_version(webui_version.innerHTML);
 }
 
+function is_forge_ui(text) {
+    if (!text) return false;
+    let lower = text.toLowerCase();
+    return lower.includes('forge') || lower.includes('neo') || text[0] == 'f';
+}
+
 function extract_version(text) {
     if (!text) return null;
     let matches;
-    if (text[0] == 'f')
+    let is_forge = is_forge_ui(text);
+    if (is_forge)
         matches = text.match(/v\d+\.\d+\.\d+/);
     else
         matches = text.match(/\d+\.\d+\.\d+/);
     if (matches === null || matches.length == 0) { return null; }
-    if (text[0] == 'f') return matches[0].substring(1);
+    if (is_forge) return matches[0].substring(1);
     return matches[0];
 }
 
@@ -725,7 +732,7 @@ onUiLoaded(() => {
                 case "lora": active_extra_tab_type = "lora"; break;
                 case "controlnet": active_extra_tab_type = "controlnet"; break;
                 case "vae": active_extra_tab_type = "vae"; break;
-                case "upscalers": active_extra_tab_type = "upscaler"; break;
+                case "upscaler": active_extra_tab_type = "upscaler"; break;
             }
 
             for (const js_model_type of model_type_list) {
@@ -736,7 +743,7 @@ onUiLoaded(() => {
                     case "lora": model_type = "lora"; break;
                     case "controlnet": model_type = "controlnet"; break;
                     case "vae": model_type = "vae"; break;
-                    case "upscalers": model_type = "upscaler"; break;
+                    case "upscaler": model_type = "upscaler"; break;
                 }
                 if (!model_type) { continue; }
                 if (model_type != active_extra_tab_type) { continue; }
@@ -759,6 +766,12 @@ onUiLoaded(() => {
                     }
 
                     search_term_node = card.querySelector(".actions .additional .search_term");
+                    if (!search_term_node) {
+                        search_term_node = card.querySelector(".actions .additional .search_terms");
+                    }
+                    if (!search_term_node) {
+                        search_term_node = card.querySelector("[data-search]");
+                    }
                     if (!search_term_node){ continue; }
 
                     search_term = search_term_node.textContent.trim();
@@ -818,7 +831,7 @@ onUiLoaded(() => {
                 case "lora": model_type = "lora"; break;
                 case "controlnet": model_type = "controlnet"; break;
                 case "vae": model_type = "vae"; break;
-                case "upscalers": model_type = "upscaler"; break;
+                case "upscaler": model_type = "upscaler"; break;
             }
 
             if (!model_type) { continue; }
@@ -842,6 +855,12 @@ onUiLoaded(() => {
                 }
 
                 search_term_node = card.querySelector(".actions .additional .search_terms");
+                if (!search_term_node) {
+                    search_term_node = card.querySelector(".actions .additional .search_term");
+                }
+                if (!search_term_node) {
+                    search_term_node = card.querySelector("[data-search]");
+                }
                 if (!search_term_node){ continue; }
 
                 search_term = search_term_node.textContent.trim();
