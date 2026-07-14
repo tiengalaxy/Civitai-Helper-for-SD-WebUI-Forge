@@ -203,10 +203,25 @@ def has_info_and_preview(model_path:str) -> bool:
     first_preview = base + ".png"
     sec_preview = base + ".preview.png"
 
-    has_info = os.path.isfile(info_file)
     has_preview = os.path.isfile(first_preview) or os.path.isfile(sec_preview)
+    if not has_preview:
+        return False
 
-    return has_info and has_preview
+    if not os.path.isfile(info_file):
+        return False
+
+    # Treat info file as incomplete when `modelId` is missing — without it we
+    # cannot build the Civitai model page URL, so the model needs re-scanning
+    # rather than being skipped.
+    try:
+        with open(info_file, "r", encoding="utf-8") as f:
+            info = json.load(f)
+        if not info or not info.get("modelId"):
+            return False
+    except Exception:
+        return False
+
+    return True
 
 
 def _has_preview(model_path:str) -> bool:

@@ -100,7 +100,26 @@ def scan_model(scan_model_types, max_size_preview, skip_nsfw_preview, force_over
                     continue
 
                 # Enhance version info with model-level data (trainedWords, modelId, etc.)
+                # Note: by-hash API occasionally returns a ModelVersion object whose
+                # `modelId` field is null/missing. Without recovery this would leave
+                # model_info.json without a modelId, which breaks the "Open Civitai
+                # page" button (the page URL is built from modelId). So we recover it
+                # here via the version-id endpoint before writing the info file.
                 model_id_from_version = model_info.get("modelId")
+                if not model_id_from_version:
+                    version_id = model_info.get("id")
+                    if version_id:
+                        try:
+                            version_info = civitai.get_version_info_by_version_id(str(version_id))
+                            if version_info:
+                                recovered = version_info.get("modelId")
+                                if recovered:
+                                    util.printD(f"Recovered modelId {recovered} from version API for {filename}")
+                                    model_info["modelId"] = recovered
+                                    model_id_from_version = recovered
+                        except Exception as e:
+                            util.printD(f"Failed to recover modelId from version API for {filename}: {str(e)}")
+
                 if model_id_from_version:
                     full_model_info = civitai.get_model_info_by_id(str(model_id_from_version))
                     if full_model_info and "modelVersions" in full_model_info:
@@ -111,9 +130,6 @@ def scan_model(scan_model_types, max_size_preview, skip_nsfw_preview, force_over
                                     if version.get("trainedWords"):
                                         model_info["trainedWords"] = version["trainedWords"]
                                     break
-                        # Ensure modelId is present
-                        if "modelId" not in model_info:
-                            model_info["modelId"] = model_id_from_version
 
                 model.write_model_info(info_file, model_info)
                 table_rows[-1] = f"| {current}/{total} | {filename} | ✅ Info fetched |"

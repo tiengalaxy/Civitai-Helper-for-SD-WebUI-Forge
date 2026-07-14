@@ -58,7 +58,7 @@ def open_model_url(msg, open_url_with_js):
 
         if not model_id:
             util.printD(f"Failed to get model id for {model_type} {search_term}")
-            return msg_handler.build_py_msg("open_url", {"url": "", "error": f"Model ID not found. Please re-scan this model with Force Overwrite: {model_type} {search_term}"})
+            return msg_handler.build_py_msg("open_url", {"url": "", "error": f"Civitai did not provide a modelId for this model (it may be unlisted, deleted, or the API timed out). Try re-scanning with Force Overwrite; if that still fails, the model is not publicly indexed on Civitai: {model_type} {search_term}"})
 
     url = civitai.get_url_dict()["modelPage"]+str(model_id)
 
