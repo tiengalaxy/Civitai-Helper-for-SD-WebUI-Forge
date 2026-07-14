@@ -180,9 +180,12 @@ def load_model_info_by_search_term(model_type, search_term):
         has_hash = False
 
     splited_path = search_term.split()
-    path_part = splited_path[0] if splited_path else search_term
-    if has_hash and len(splited_path) > 1:
+    if not splited_path:
+        path_part = search_term
+    elif has_hash and len(splited_path) > 1:
         path_part = " ".join(splited_path[:-1])
+    else:
+        path_part = " ".join(splited_path)
 
     path_part = _normalize_search_term_path(path_part)
 

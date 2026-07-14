@@ -156,9 +156,12 @@ def get_model_path_by_search_term(model_type:str, search_term:str):
         has_hash = False
 
     splited_path = search_term.split()
-    model_sub_path = splited_path[0]
-    if has_hash and len(splited_path) > 1:
+    if not splited_path:
+        model_sub_path = search_term
+    elif has_hash and len(splited_path) > 1:
         model_sub_path = " ".join(splited_path[:-1])
+    else:
+        model_sub_path = " ".join(splited_path)
 
     model_sub_path = model_sub_path.replace("\\\\", "\\")
     if os.sep != "\\":
