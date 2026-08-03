@@ -3,7 +3,11 @@
 
 # SD WebUI Forge Neo Classic - Civitai Helper
 
-**Stable Diffusion WebUI Forge** 向けの強化版 Civitai Helper 拡張機能です。オリジナルの [Civitai Helper](https://github.com/butaixianran/Stable-Diffusion-Webui-Civitai-Helper) をベースに、[ComfyUI LoRA Manager](https://github.com/willmiao/ComfyUI-Lora-Manager) にインスパイアされた大幅な機能強化を行いました。
+<p align="center">
+  <strong><code>Stable Diffusion WebUI Forge</code> 向けの強化版 Civitai Helper 拡張機能</strong><br>
+  オリジナルの <a href="https://github.com/butaixianran/Stable-Diffusion-Webui-Civitai-Helper">Civitai Helper</a> をベースに開発<br>
+  <a href="https://github.com/willmiao/ComfyUI-Lora-Manager">ComfyUI LoRA Manager</a> にインスパイアされた機能強化
+</p>
 
 ## ✨ 新機能（オリジナルとの比較）
 
@@ -112,5 +116,33 @@ Extra Networks ツールバーの 🔁 **Refresh Civitai Helper** ボタンを�
 ### スキャンまたは API リクエストが失敗する
 Civitai が一時的にダウンしているか、レート制限がかかっている可能性があります。しばらく待ってから再試行してください。中国国内からの場合は、設定でプロキシを構成してください。
 
-### Civitai から間違ったモデル情報が取得される
+### Civitai から誤ったモデル情報が取得される
 一部のモデルは Civitai のデータベースで SHA256 が正しくありません。「URL からモデル情報を取得」機能を使用して手動でモデルを関連付けてください。
+
+## 📜 更新履歴
+
+### v1.15.0 (2026-08-03)
+
+**コード品質と信頼性の向上**
+
+- **SSL 検証を復活** — 全ダウンロードで SSL 証明書検証をデフォルトで有効化（以前は無効）。プロキシユーザーは引き続き HTTPS プロキシを安全に使用可能。
+- **ネットワークエラー時の自動リトライ** — API 呼び出しとダウンロードが失敗した場合、指数バックオフ（2s → 4s → 8s）で最大 3 回自動リトライ。
+- **API レート制限** — 集中管理された `RateLimiter` で Civitai のレート制限超過を防止。従来の散在した `time.sleep(1)` 呼び出しを置き換え。
+- **一括ダウンロードを修正** — `一括新バージョンダウンロード` がスタブ関数だった問題を修正。実際に各バージョンをダウンロードし info ファイルを保存。
+- **名前付きタプル** — 新バージョン確認結果を `NewVersion` 名前付きタプルに変更。脆弱な `nv[3]` インデックスアクセスを排除。
+- **デッドコード削除** — 未使用の `setting.py` と `model_type_display` 辞書をクリーンアップ。
+- **ログ改善** — `printD` と共存する形で `logging` モジュールを統合。
+- **ダウンロード競合処理** — ファイル名競合時に無限 `_2`、`_3` ループの代わりにタイムスタンプベースの命名を採用。
+
+### v1.14.0 (初期 Fork)
+
+- Forge Neo 互換性：`_resolve_ti_folder()` で embeddings パスを自動検出
+- ワンクリック LoRA 適用：トリガーワード + `<lora:name:strength>` タグ
+- トリガーワードツールチップ（ホバー表示）
+- モデルカードのファイルサイズ表示
+- モデルメモ（`.ch_note`）
+- スマートスキャンスキップ（info + プレビュー既存モデルを自動スキップ）
+- リアルタイムスキャン進捗（パーセント・ステップ状態）
+- 拡張機能のアンインストール / 強制更新ボタン
+- ControlNet、VAE、Upscaler 対応
+- バッチ API リクエストとフロントエンドキャッシュ

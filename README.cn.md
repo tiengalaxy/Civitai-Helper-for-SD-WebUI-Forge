@@ -3,7 +3,11 @@
 
 # SD WebUI Forge Neo Classic - Civitai Helper
 
-专为 **Stable Diffusion WebUI Forge** 打造的增强版 Civitai Helper 插件，基于原版 [Civitai Helper](https://github.com/butaixianran/Stable-Diffusion-Webui-Civitai-Helper) 开发，参考 [ComfyUI LoRA Manager](https://github.com/willmiao/ComfyUI-Lora-Manager) 进行了大量功能升级。
+<p align="center">
+  <strong>专为 <code>Stable Diffusion WebUI Forge</code> 打造的增强版 Civitai Helper 插件</strong><br>
+  基于原版 <a href="https://github.com/butaixianran/Stable-Diffusion-Webui-Civitai-Helper">Civitai Helper</a> 开发<br>
+  参考 <a href="https://github.com/willmiao/ComfyUI-Lora-Manager">ComfyUI LoRA Manager</a> 进行功能升级
+</p>
 
 ## ✨ 新增功能（对比原版）
 
@@ -114,3 +118,31 @@ Civitai 可能暂时不可用或限流。稍后再试。国内用户请在设置
 
 ### 从 Civitai 获取到错误的模型信息
 部分模型在 Civitai 数据库中的 SHA256 有误。请使用"通过 URL 获取模型信息"功能手动关联。
+
+## 📜 更新日志
+
+### v1.15.0 (2026-08-03)
+
+**代码质量与可靠性提升**
+
+- **SSL 验证恢复** — 所有下载默认启用 SSL 证书验证（之前被禁用）。代理用户仍可安全使用 HTTPS 代理。
+- **网络错误自动重试** — API 调用和下载失败时自动重试最多 3 次，使用指数退避策略（2s → 4s → 8s）。
+- **API 速率限制** — 集中式 `RateLimiter` 防止超出 Civitai 的速率限制，替代分散的 `time.sleep(1)` 调用。
+- **批量下载修复** — `批量下载新版本` 之前是空壳函数，现已实现真正的批量下载并保存 info 文件。
+- **命名元组** — 新版本检查结果改用 `NewVersion` 命名元组，替代脆弱的 `nv[3]` 下标访问。
+- **死代码清理** — 删除未使用的 `setting.py` 和 `model_type_display` 字典。
+- **日志改进** — 引入 `logging` 模块集成，同时保留 `printD` 以便调试。
+- **下载冲突处理** — 文件名冲突改用时间戳命名，替代无限 `_2`、`_3` 循环。
+
+### v1.14.0 (初始 Fork)
+
+- Forge Neo 兼容性，`_resolve_ti_folder()` 自动识别 embeddings 路径
+- 一键 LoRA 应用：触发词 + `<lora:名称:权重>` 标签
+- 触发词悬停预览
+- 模型卡片文件大小显示
+- 模型个人备注（`.ch_note`）
+- 智能跳过扫描（已有 info + 预览图的模型自动跳过）
+- 实时扫描进度百分比和步骤状态
+- 扩展卸载 / 强制更新按钮
+- ControlNet、VAE、Upscaler 支持
+- 批量 API 请求和前端缓存
