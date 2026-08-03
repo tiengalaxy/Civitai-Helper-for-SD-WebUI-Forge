@@ -6,7 +6,6 @@ import re
 import requests
 from . import util
 from . import model
-from . import setting
 
 
 suffix = ".civitai"
@@ -426,7 +425,7 @@ def _safe_get(d, key, default=None):
     return val
 
 
-def check_model_new_version_by_path(model_path:str, delay:float=1) -> tuple:
+def check_model_new_version_by_path(model_path:str, delay:float=1) -> NewVersion:
     if not model_path:
         util.printD("model_path is empty")
         return
@@ -486,7 +485,7 @@ def check_model_new_version_by_path(model_path:str, delay:float=1) -> tuple:
     if images and images[0]:
         img_url = _safe_get(images[0], "url", "")
 
-    return (model_path, model_id, model_name, current_version_id, new_version_name, description, downloadUrl, img_url)
+    return NewVersion(model_path, model_id, model_name, current_version_id, new_version_name, description, downloadUrl, img_url)
 
 
 def check_models_new_version_by_model_types(model_types:list, delay:float=1, check_new_ver_exist_in_all_folder:bool=False) -> list:
@@ -522,19 +521,19 @@ def check_models_new_version_by_model_types(model_types:list, delay:float=1, che
                     if not r:
                         continue
 
-                    model_path, model_id, model_name, current_version_id, new_version_name, description, downloadUrl, img_url = r
-                    if not current_version_id:
+                    nv = r
+                    if not nv.current_version_id:
                         continue
 
-                    is_already_in_list = any(current_version_id == nv[3] for nv in new_versions)
+                    is_already_in_list = any(current_version_id == nv.current_version_id for nv in new_versions)
                     if is_already_in_list:
                         util.printD("New version is already in list")
                         continue
 
                     if check_new_ver_exist_in_all_folder:
-                        target_model_info = search_local_model_info_by_version_id(model_folder, current_version_id, check_new_ver_exist_in_all_folder)
+                        target_model_info = search_local_model_info_by_version_id(model_folder, nv.current_version_id, check_new_ver_exist_in_all_folder)
                     else:
-                        target_model_info = search_local_model_info_by_version_id(root, current_version_id, check_new_ver_exist_in_all_folder)
+                        target_model_info = search_local_model_info_by_version_id(root, nv.current_version_id, check_new_ver_exist_in_all_folder)
                     if target_model_info:
                         util.printD("New version is already existed")
                         continue

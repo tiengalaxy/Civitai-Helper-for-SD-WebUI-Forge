@@ -1,15 +1,43 @@
 # -*- coding: UTF-8 -*-
 import sys
+import time
 import requests
 import os
+from datetime import datetime
 from . import util
 
 
 dl_ext = ".downloading"
 
-requests.packages.urllib3.disable_warnings()
-
 REQUEST_TIMEOUT = 30
+MAX_RETRIES = 3
+
+
+def _should_verify_ssl():
+    """SSL verification is enabled by default. Only skip when a custom proxy
+    is configured (e.g. local debugging proxy)."""
+    return not bool(util.proxies)
+
+
+def _request_with_retry(method, url, **kwargs):
+    """HTTP request with exponential backoff retry."""
+    last_error = None
+    for attempt in range(MAX_RETRIES):
+        try:
+            resp = method(url, **kwargs)
+            return resp
+        except requests.exceptions.Timeout as e:
+            last_error = e
+            util.printD(f"Request timed out (attempt {attempt+1}/{MAX_RETRIES}): {url}")
+        except Exception as e:
+            last_error = e
+            util.printD(f"Request failed (attempt {attempt+1}/{MAX_RETRIES}): {str(e)}")
+        if attempt < MAX_RETRIES - 1:
+            wait = 2 ** attempt
+            util.printD(f"Retrying in {wait}s...")
+            time.sleep(wait)
+    raise last_error
+
 
 def dl(url, folder, filename, filepath):
     util.printD("Start downloading from: " + url)
@@ -29,13 +57,16 @@ def dl(url, folder, filename, filepath):
         if filename:
             file_path = os.path.join(folder, filename)
 
+    verify_ssl = _should_verify_ssl()
     try:
-        rh = requests.get(url, stream=True, verify=False, headers=util.def_headers, proxies=util.proxies, timeout=REQUEST_TIMEOUT)
-    except requests.exceptions.Timeout:
-        util.printD(f"Header request timed out after {REQUEST_TIMEOUT} seconds: {url}")
-        return
+        rh = _request_with_retry(
+            requests.get, url,
+            stream=True, verify=verify_ssl,
+            headers=util.def_headers, proxies=util.proxies,
+            timeout=REQUEST_TIMEOUT
+        )
     except Exception as e:
-        util.printD(f"Header request failed: {str(e)}")
+        util.printD(f"Header request failed after {MAX_RETRIES} retries: {str(e)}")
         return
 
     total_size = int(rh.headers.get('Content-Length', -1))
@@ -63,15 +94,14 @@ def dl(url, folder, filename, filepath):
     util.printD("Target file path: " + file_path)
     base, ext = os.path.splitext(file_path)
 
-    count = 2
-    new_base = base
-    while os.path.isfile(file_path):
-        util.printD("Target file already exist.")
-        new_base = base + "_" + str(count)
-        file_path = new_base + ext
-        count += 1
+    # Use timestamp-based suffix for naming conflicts instead of unbounded counter
+    if os.path.isfile(file_path):
+        util.printD("Target file already exist, appending timestamp")
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        file_path = f"{base}_{ts}{ext}"
+        base = os.path.splitext(file_path)[0]
 
-    dl_file_path = new_base+dl_ext
+    dl_file_path = base + dl_ext
 
     util.printD(f"Downloading to temp file: {dl_file_path}")
 
@@ -87,12 +117,14 @@ def dl(url, folder, filename, filepath):
         headers["Authorization"] = f"Bearer {util.civitai_api_key}"
 
     try:
-        r = requests.get(url, stream=True, verify=False, headers=headers, proxies=util.proxies, timeout=REQUEST_TIMEOUT)
-    except requests.exceptions.Timeout:
-        util.printD(f"Download request timed out after {REQUEST_TIMEOUT} seconds: {url}")
-        return
+        r = _request_with_retry(
+            requests.get, url,
+            stream=True, verify=verify_ssl,
+            headers=headers, proxies=util.proxies,
+            timeout=REQUEST_TIMEOUT
+        )
     except Exception as e:
-        util.printD(f"Download request failed: {str(e)}")
+        util.printD(f"Download request failed after {MAX_RETRIES} retries: {str(e)}")
         return
 
     try:

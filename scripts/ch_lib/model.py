@@ -44,16 +44,6 @@ exts = (".bin", ".pt", ".safetensors", ".ckpt", ".pth")
 info_ext = ".info"
 vae_suffix = ".vae"
 
-model_type_display = {
-    "ti": "Textual Inversion",
-    "hyper": "Hypernetwork",
-    "ckp": "Checkpoint",
-    "lora": "LoRA",
-    "controlnet": "ControlNet",
-    "vae": "VAE",
-    "upscaler": "Upscaler",
-}
-
 
 def get_custom_model_folder():
     util.printD("Get Custom Model Folder")

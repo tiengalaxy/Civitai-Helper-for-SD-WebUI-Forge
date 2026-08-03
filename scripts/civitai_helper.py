@@ -10,6 +10,8 @@ from scripts.ch_lib import js_action_civitai
 from scripts.ch_lib import model_action_civitai
 from scripts.ch_lib import civitai
 from scripts.ch_lib import util
+from scripts.ch_lib import msg_handler
+from scripts.ch_lib import downloader
 
 
 root_path = os.getcwd()
@@ -103,11 +105,39 @@ def on_ui_tabs():
     def open_model_url(js_msg_txtbox):
         return js_action_civitai.open_model_url(js_msg_txtbox, open_url_with_js)
 
-    def dl_model_new_version(js_msg_txtbox, max_size_preview):
+    def dl_model_new_version(js_msg_txtbox):
         return js_action_civitai.dl_model_new_version(js_msg_txtbox, max_size_preview, skip_nsfw_preview)
 
     def batch_dl_new_versions(js_msg_txtbox):
-        return "Batch download started. Check console log for detail."
+        util.printD("Start batch_dl_new_versions")
+        result = msg_handler.parse_js_msg(js_msg_txtbox)
+        if not result:
+            return "\u274c Failed to parse batch download request"
+        versions = result.get("versions", [])
+        if not versions:
+            return "\u26a0 No versions to download"
+        downloaded = 0
+        failed = 0
+        for v in versions:
+            model_path = v.get("model_path", "")
+            download_url = v.get("download_url", "")
+            version_id = v.get("version_id", "")
+            if not model_path or not download_url:
+                failed += 1
+                continue
+            model_folder = os.path.dirname(model_path)
+            new_path = downloader.dl(download_url, model_folder, None, None)
+            if new_path:
+                downloaded += 1
+                if version_id:
+                    version_info = civitai.get_version_info_by_version_id(str(version_id))
+                    if version_info:
+                        base, ext = os.path.splitext(new_path)
+                        info_file = base + civitai.suffix + model.info_ext
+                        model.write_model_info(info_file, version_info)
+            else:
+                failed += 1
+        return f"\u2705 Batch download done. Downloaded: **{downloaded}**, Failed: **{failed}**"
 
     def get_model_names_by_input(model_type, empty_info_only):
         names = civitai.get_model_names_by_input(model_type, empty_info_only)
@@ -251,3 +281,5 @@ def on_ui_tabs():
 
 script_callbacks.on_ui_settings(on_ui_settings)
 script_callbacks.on_ui_tabs(on_ui_tabs)
+
+

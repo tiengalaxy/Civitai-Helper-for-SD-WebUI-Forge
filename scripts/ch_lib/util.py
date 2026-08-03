@@ -4,9 +4,13 @@ import io
 import hashlib
 import requests
 import shutil
+import time
+import logging
+
+logger = logging.getLogger("CivitaiHelper")
 
 
-version = "1.14.0"
+version = "1.15.0"
 
 def_headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                "Authorization": ""}
@@ -17,8 +21,38 @@ civitai_api_key = ""
 civitai_domain = "civitai.red"
 
 
-def printD(msg):
+def printD(msg: str) -> None:
+    """Print debug message to console (backward-compatible wrapper)."""
     print(f"Civitai Helper: {msg}")
+    logger.debug(msg)
+
+
+class RateLimiter:
+    """Simple token-bucket rate limiter for API calls.
+
+    Usage:
+        limiter = RateLimiter(calls_per_second=1)
+        limiter.wait()  # blocks if called too frequently
+    """
+
+    def __init__(self, calls_per_second: float = 1.0):
+        self.min_interval = 1.0 / max(calls_per_second, 0.1)
+        self.last_call = 0.0
+
+    def wait(self) -> None:
+        """Block until the next call is allowed."""
+        elapsed = time.time() - self.last_call
+        if elapsed < self.min_interval:
+            time.sleep(self.min_interval - elapsed)
+        self.last_call = time.time()
+
+    def reset(self) -> None:
+        """Reset the timer."""
+        self.last_call = 0.0
+
+
+# Global rate limiter instance (1 call/second by default)
+api_rate_limiter = RateLimiter(calls_per_second=1.0)
 
 
 def read_chunks(file, size=io.DEFAULT_BUFFER_SIZE):
@@ -28,7 +62,7 @@ def read_chunks(file, size=io.DEFAULT_BUFFER_SIZE):
             break
         yield chunk
 
-def gen_file_sha256(filname):
+def gen_file_sha256(filname: str) -> str:
     printD("Use Memory Optimized SHA256")
     blocksize=1 << 20
     h = hashlib.sha256()
@@ -45,7 +79,7 @@ def gen_file_sha256(filname):
 
 
 
-def download_file(url, path, timeout=30):
+def download_file(url: str, path: str, timeout: int = 30) -> bool:
     printD("Downloading file from: " + url)
     try:
         r = requests.get(url, stream=True, headers=def_headers, proxies=proxies, timeout=timeout)
@@ -67,15 +101,15 @@ def download_file(url, path, timeout=30):
         printD(f"Download failed: {str(e)}")
         return False
 
-def get_subfolders(folder:str) -> list:
+def get_subfolders(folder: str) -> list:
     printD("Get subfolder for: " + folder)
     if not folder:
         printD("folder can not be None")
-        return
+        return []
 
     if not os.path.isdir(folder):
         printD("path is not a folder")
-        return
+        return []
 
     prefix_len = len(folder)
     subfolders = []
@@ -88,7 +122,7 @@ def get_subfolders(folder:str) -> list:
     return subfolders
 
 
-def get_relative_path(item_path:str, parent_path:str) -> str:
+def get_relative_path(item_path: str, parent_path: str) -> str:
     if not item_path:
         return ""
     if not parent_path:

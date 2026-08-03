@@ -10,6 +10,22 @@ from . import downloader
 MAX_TABLE_ROWS = 50
 
 
+def _build_progress_md(progress_pct, current, total, model_count, skipped_count, display_rows, image_count=0, done=False):
+    """Build consistent progress markdown table for scan_model generator."""
+    if done:
+        return f"✅ **Done!** Scanned: **{model_count}** | Images: **{image_count}** | Skipped: **{skipped_count}** | Total: **{total}**\n\n| Step | Model | Status |\n|------|-------|--------|\n" + "\n".join(display_rows)
+    header = f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}"
+    table = "| Step | Model | Status |\n|------|-------|--------|\n" + "\n".join(display_rows)
+    return f"{header}\n\n{table}"
+
+
+def _yield_progress(table_rows, current, total, model_count, skipped_count):
+    """Yield a progress update with the current table rows."""
+    progress_pct = int(current / total * 100)
+    display_rows = table_rows[-MAX_TABLE_ROWS:]
+    return _build_progress_md(progress_pct, current, total, model_count, skipped_count, display_rows)
+
+
 def scan_model(scan_model_types, max_size_preview, skip_nsfw_preview, force_overwrite=False):
     util.printD("Start scan_model")
 
@@ -66,9 +82,7 @@ def scan_model(scan_model_types, max_size_preview, skip_nsfw_preview, force_over
                 skipped_count = skipped_count + 1
                 table_rows.append(f"| {current}/{total} | {filename} | ⏭ Skipped (complete) |")
                 if current % 10 == 0 or current == total:
-                    progress_pct = int(current / total * 100)
-                    display_rows = table_rows[-MAX_TABLE_ROWS:]
-                    yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n" + "\n".join(display_rows)
+                    yield _yield_progress(table_rows, current, total, model_count, skipped_count)
                 continue
 
             info_file = base + civitai.suffix + model.info_ext
@@ -76,16 +90,13 @@ def scan_model(scan_model_types, max_size_preview, skip_nsfw_preview, force_over
 
             if need_fetch_info:
                 table_rows.append(f"| {current}/{total} | {filename} | 🔐 Computing SHA256... |")
-                progress_pct = int(current / total * 100)
-                display_rows = table_rows[-MAX_TABLE_ROWS:]
-                yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n" + "\n".join(display_rows)
+                yield _yield_progress(table_rows, current, total, model_count, skipped_count)
 
                 hash = util.gen_file_sha256(item)
 
                 if not hash:
                     table_rows[-1] = f"| {current}/{total} | {filename} | ❌ SHA256 failed |"
-                    display_rows = table_rows[-MAX_TABLE_ROWS:]
-                    yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n" + "\n".join(display_rows)
+                    yield _yield_progress(table_rows, current, total, model_count, skipped_count)
                     continue
 
                 model_info = civitai.get_model_info_by_hash(hash)
@@ -95,8 +106,7 @@ def scan_model(scan_model_types, max_size_preview, skip_nsfw_preview, force_over
 
                 if not model_info:
                     table_rows[-1] = f"| {current}/{total} | {filename} | ❌ API failed or model not found |"
-                    display_rows = table_rows[-MAX_TABLE_ROWS:]
-                    yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n" + "\n".join(display_rows)
+                    yield _yield_progress(table_rows, current, total, model_count, skipped_count)
                     continue
 
                 # Enhance version info with model-level data (trainedWords, modelId, etc.)
@@ -139,9 +149,7 @@ def scan_model(scan_model_types, max_size_preview, skip_nsfw_preview, force_over
             need_preview = force_overwrite or not model._has_preview(item)
             if need_preview:
                 table_rows.append(f"| {current}/{total} | {filename} | 🖼 Downloading preview... |")
-                progress_pct = int(current / total * 100)
-                display_rows = table_rows[-MAX_TABLE_ROWS:]
-                yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n" + "\n".join(display_rows)
+                yield _yield_progress(table_rows, current, total, model_count, skipped_count)
 
                 civitai.get_preview_image_by_model_path(item, max_size_preview, skip_nsfw_preview)
                 image_count = image_count + 1
@@ -150,19 +158,15 @@ def scan_model(scan_model_types, max_size_preview, skip_nsfw_preview, force_over
             else:
                 table_rows.append(f"| {current}/{total} | {filename} | ⏭ Preview exists |")
 
-            progress_pct = int(current / total * 100)
-            display_rows = table_rows[-MAX_TABLE_ROWS:]
-            yield f"🔍 Scanning... **{progress_pct}%** ({current}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n" + "\n".join(display_rows)
+            yield _yield_progress(table_rows, current, total, model_count, skipped_count)
 
         except Exception as e:
             util.printD(f"Error processing model {filename}: {str(e)}")
             table_rows.append(f"| {idx+1}/{total} | {filename} | ❌ Error: {str(e)} |")
-            progress_pct = int((idx + 1) / total * 100)
-            display_rows = table_rows[-MAX_TABLE_ROWS:]
-            yield f"🔍 Scanning... **{progress_pct}%** ({idx+1}/{total}) | Scanned: {model_count} | Skipped: {skipped_count}\n\n| Step | Model | Status |\n|------|-------|--------|\n" + "\n".join(display_rows)
+            yield _yield_progress(table_rows, idx+1, total, model_count, skipped_count)
 
     display_rows = table_rows[-MAX_TABLE_ROWS:]
-    yield f"✅ **Done!** Scanned: **{model_count}** | Images: **{image_count}** | Skipped: **{skipped_count}** | Total: **{total}**\n\n| Step | Model | Status |\n|------|-------|--------|\n" + "\n".join(display_rows)
+    yield _build_progress_md(100, total, total, model_count, skipped_count, display_rows, image_count=image_count, done=True)
 
     util.printD(f"Done. Scanned {model_count} models, checked {image_count} images, skipped {skipped_count} complete models")
 
@@ -353,7 +357,6 @@ def check_models_new_version_to_md(model_types, check_new_ver_exist_in_all_folde
     md += "|-------|------|-------------|--------------|\n"
 
     for r in new_versions:
-        model_path, model_id, model_name, current_version_id, new_version_name, description, downloadUrl, img_url = r
-        md += f"| {model_name} | {os.path.basename(os.path.dirname(model_path))} | {new_version_name} | [Download]({downloadUrl}) |\n"
+        md += f"| {r.model_name} | {os.path.basename(os.path.dirname(r.model_path))} | {r.new_version_name} | [Download]({r.downloadUrl}) |\n"
 
     return md
