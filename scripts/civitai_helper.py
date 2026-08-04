@@ -19,7 +19,6 @@ extension_path = scripts.basedir()
 
 model.get_custom_model_folder()
 
-_ui_registered = False
 _settings_registered = False
 
 
@@ -40,10 +39,7 @@ def on_ui_settings():
     shared.opts.add_option("ch_lora_strength", shared.OptionInfo(1.0, "Default LoRA Strength", gr.Slider, {"interactive": True, "minimum": 0.0, "maximum": 2.0, "step": 0.05}, section=ch_section))
 
 def on_ui_tabs():
-    global _ui_registered
-    if _ui_registered:
-        return None
-    _ui_registered = True
+    # Build UI tab — Forge calls this once per UI load; no guard needed
 
     try:
         txt2img_prompt = modules.ui.txt2img_paste_fields[0][0]
